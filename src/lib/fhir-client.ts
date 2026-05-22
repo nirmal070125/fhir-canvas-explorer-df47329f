@@ -1,4 +1,7 @@
-export const DEFAULT_BASE_URL = "http://localhost:9090/fhir/r4";
+// Relative path — when the UI is co-hosted with the FHIR server under one gateway,
+// browsers resolve this against the current origin (no CORS). Override via the
+// BaseUrlBar to point at any other FHIR R4 endpoint (stored in localStorage).
+export const DEFAULT_BASE_URL = "/fhir/r4";
 
 const STORAGE_KEY = "fhir-explorer:baseUrl";
 
