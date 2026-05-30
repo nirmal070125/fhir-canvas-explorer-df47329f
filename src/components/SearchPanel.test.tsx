@@ -84,4 +84,43 @@ describe("SearchPanel", () => {
     await user.click(screen.getByRole("button", { name: /^search$/i }));
     expect(client.fhirFetch).toHaveBeenCalledWith("/Patient?_count=10&gender=female", {}, BASE);
   });
+
+  it("submits the search when Enter is pressed in a value field", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    const value = screen.getByRole("textbox", { name: /parameter value/i });
+    await user.clear(value);
+    await user.type(value, "5{Enter}");
+    expect(client.fhirFetch).toHaveBeenCalledWith("/Patient?_count=5", {}, BASE);
+  });
+
+  it("renders result rows with summaries and expands a resource on click", async () => {
+    vi.mocked(client.fhirFetch).mockResolvedValue({
+      ...okBundle(),
+      body: {
+        resourceType: "Bundle",
+        total: 2,
+        entry: [
+          { resource: { resourceType: "Patient", id: "p1", name: [{ given: ["Alice"], family: "Smith" }] } },
+          { resource: { resourceType: "Observation", id: "o1", code: { text: "Heart rate" } } },
+        ],
+      },
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+    const row = await screen.findByRole("button", { name: /Patient\/p1/ });
+    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Observation\/o1/ })).toBeInTheDocument();
+    expect(screen.getByText("Heart rate")).toBeInTheDocument();
+
+    // Collapsed initially; expanding adds a per-row JSON view (the full bundle
+    // JSON already appears once in the response panel below).
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    const before = screen.getAllByText(/"id": "p1"/).length;
+    await user.click(row);
+    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByText(/"id": "p1"/).length).toBe(before + 1);
+  });
 });
