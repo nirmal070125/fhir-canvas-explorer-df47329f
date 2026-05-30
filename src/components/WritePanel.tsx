@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ResponseView } from "./ResponseView";
+import { ResourceCombobox } from "./ResourceCombobox";
 
 type Op = "create" | "update" | "patch" | "delete" | "validate";
 
@@ -110,13 +111,15 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
-          <Label>Resource Type</Label>
-          <Input
+          <Label htmlFor="write-type">Resource Type</Label>
+          <ResourceCombobox
+            id="write-type"
             value={type}
-            onChange={(e) => {
-              setType(e.target.value);
-              if (SAMPLES[e.target.value]) setBody(SAMPLES[e.target.value]);
+            onChange={(next) => {
+              setType(next);
+              if (SAMPLES[next]) setBody(SAMPLES[next]);
             }}
+            baseUrl={baseUrl}
           />
         </div>
         <div>

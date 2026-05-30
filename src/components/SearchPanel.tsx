@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponseView } from "./ResponseView";
+import { ResourceCombobox } from "./ResourceCombobox";
 import { Plus, Trash2, Search } from "lucide-react";
 
 export function SearchPanel({ baseUrl }: { baseUrl: string }) {
@@ -80,11 +81,11 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
       <div className="grid gap-3 sm:grid-cols-[200px_1fr_auto]">
         <div>
           <Label htmlFor="rt">Resource Type</Label>
-          <Input
+          <ResourceCombobox
             id="rt"
             value={resourceType}
-            onChange={(e) => setResourceType(e.target.value)}
-            placeholder="Patient"
+            onChange={setResourceType}
+            baseUrl={baseUrl}
           />
         </div>
         <div>
