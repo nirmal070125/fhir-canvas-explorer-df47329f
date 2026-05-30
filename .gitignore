@@ -8,6 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# This repo uses Bun (bun.lockb) — ignore stray npm/yarn/pnpm lockfiles.
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 dist
 dist-ssr
 .output
