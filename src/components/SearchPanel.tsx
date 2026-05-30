@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponseView } from "./ResponseView";
 import { ResourceCombobox } from "./ResourceCombobox";
+import { SearchParamCombobox } from "./SearchParamCombobox";
+import { useResourceSearchParams } from "@/hooks/use-resource-search-params";
+import { valueHintForType } from "@/lib/fhir-search-params";
 import { Plus, Trash2, Search } from "lucide-react";
 
 export function SearchPanel({ baseUrl }: { baseUrl: string }) {
@@ -15,6 +18,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const [res, setRes] = useState<FhirResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [usePost, setUsePost] = useState(false);
+  const { byName } = useResourceSearchParams(resourceType, baseUrl);
 
   function update(i: number, field: "k" | "v", v: string) {
     setParams((p) => p.map((row, idx) => (idx === i ? { ...row, [field]: v } : row)));
@@ -119,25 +123,36 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
 
       <div className="space-y-2">
         <Label>Search Parameters</Label>
-        {params.map((p, i) => (
-          <div key={i} className="flex gap-2">
-            <Input
-              placeholder="name (e.g. family, gender, _count, _sort)"
-              value={p.k}
-              onChange={(e) => update(i, "k", e.target.value)}
-              className="flex-1 font-mono text-sm"
-            />
-            <Input
-              placeholder="value"
-              value={p.v}
-              onChange={(e) => update(i, "v", e.target.value)}
-              className="flex-1 font-mono text-sm"
-            />
-            <Button variant="ghost" size="icon" onClick={() => remove(i)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+        {params.map((p, i) => {
+          const def = byName.get(p.k);
+          return (
+            <div key={i} className="flex gap-2">
+              <div className="flex-1">
+                <SearchParamCombobox
+                  resourceType={resourceType}
+                  baseUrl={baseUrl}
+                  value={p.k}
+                  onChange={(name) => update(i, "k", name)}
+                />
+              </div>
+              <Input
+                aria-label="Parameter value"
+                placeholder={valueHintForType(def?.type)}
+                value={p.v}
+                onChange={(e) => update(i, "v", e.target.value)}
+                className="flex-1 font-mono text-sm"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => remove(i)}
+                aria-label="Remove parameter"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        })}
         <Button variant="outline" size="sm" onClick={add}>
           <Plus className="mr-1 h-4 w-4" /> Add parameter
         </Button>

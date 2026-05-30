@@ -33,7 +33,9 @@ describe("SearchPanel", () => {
   it("starts on Patient with a default _count=10 parameter", () => {
     renderWithProviders(<SearchPanel baseUrl={BASE} />);
     expect(screen.getByRole("combobox", { name: /resource type/i })).toHaveTextContent("Patient");
-    expect(screen.getByDisplayValue("_count")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /search parameter name/i })).toHaveTextContent(
+      "_count",
+    );
     expect(screen.getByDisplayValue("10")).toBeInTheDocument();
   });
 
@@ -47,17 +49,14 @@ describe("SearchPanel", () => {
   it("adds and removes parameter rows", async () => {
     const user = userEvent.setup();
     renderWithProviders(<SearchPanel baseUrl={BASE} />);
-    const keyInputs = () => screen.getAllByPlaceholderText(/name \(e\.g\./i);
-    expect(keyInputs()).toHaveLength(1);
+    const paramNameBoxes = () => screen.getAllByRole("combobox", { name: /search parameter name/i });
+    expect(paramNameBoxes()).toHaveLength(1);
 
     await user.click(screen.getByRole("button", { name: /add parameter/i }));
-    expect(keyInputs()).toHaveLength(2);
+    expect(paramNameBoxes()).toHaveLength(2);
 
-    // Before a search runs, the only text-less (icon-only) buttons are the
-    // per-row remove buttons.
-    const trashButtons = screen.getAllByRole("button").filter((b) => b.textContent === "");
-    await user.click(trashButtons[0]);
-    expect(keyInputs()).toHaveLength(1);
+    await user.click(screen.getAllByRole("button", { name: /remove parameter/i })[0]);
+    expect(paramNameBoxes()).toHaveLength(1);
   });
 
   it("reflects a resource type chosen from the combobox in the request path", async () => {
@@ -68,5 +67,21 @@ describe("SearchPanel", () => {
     await user.click(screen.getByRole("option", { name: "Observation" }));
     await user.click(screen.getByRole("button", { name: /^search$/i }));
     expect(client.fhirFetch).toHaveBeenCalledWith("/Observation?_count=10", {}, BASE);
+  });
+
+  it("lets you pick a curated search parameter and includes it in the request", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    await user.click(screen.getByRole("button", { name: /add parameter/i }));
+
+    const nameBoxes = screen.getAllByRole("combobox", { name: /search parameter name/i });
+    await user.click(nameBoxes[1]);
+    await user.type(screen.getByPlaceholderText(/search patient parameters/i), "gender");
+    await user.click(screen.getByRole("option", { name: /gender/i }));
+
+    const valueInputs = screen.getAllByRole("textbox", { name: /parameter value/i });
+    await user.type(valueInputs[1], "female");
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
+    expect(client.fhirFetch).toHaveBeenCalledWith("/Patient?_count=10&gender=female", {}, BASE);
   });
 });
