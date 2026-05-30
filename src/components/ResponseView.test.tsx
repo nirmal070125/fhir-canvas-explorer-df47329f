@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ResponseView } from "./ResponseView";
 import type { FhirResponse } from "@/lib/fhir-client";
 
@@ -39,5 +40,36 @@ describe("ResponseView", () => {
   it("renders a collapsible headers section when headers are present", () => {
     render(<ResponseView res={makeResponse({ headers: { "content-type": "application/fhir+json" } })} />);
     expect(screen.getByText(/headers \(1\)/i)).toBeInTheDocument();
+  });
+
+  it("copies the response JSON to the clipboard", async () => {
+    const user = userEvent.setup();
+    // Override after setup() so our spy (not user-event's stub) receives the call.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    render(<ResponseView res={makeResponse()} />);
+    await user.click(screen.getByRole("button", { name: /copy response/i }));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('"resourceType": "Patient"'));
+    expect(await screen.findByText(/copied/i)).toBeInTheDocument();
+  });
+
+  it("offers a download button", () => {
+    render(<ResponseView res={makeResponse()} />);
+    expect(screen.getByRole("button", { name: /download response/i })).toBeInTheDocument();
+  });
+
+  it("renders OperationOutcome issues human-readably", () => {
+    const oo = {
+      resourceType: "OperationOutcome",
+      issue: [
+        { severity: "error", code: "invalid", diagnostics: "Patient.gender has invalid value" },
+        { severity: "warning", code: "informational", diagnostics: "Deprecated element used" },
+      ],
+    };
+    render(<ResponseView res={makeResponse({ status: 400, ok: false, body: oo })} />);
+    expect(screen.getByText(/OperationOutcome · 2 issues/i)).toBeInTheDocument();
+    expect(screen.getByText("error")).toBeInTheDocument();
+    expect(screen.getByText("Patient.gender has invalid value")).toBeInTheDocument();
+    expect(screen.getByText("warning")).toBeInTheDocument();
   });
 });
