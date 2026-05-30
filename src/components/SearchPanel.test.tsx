@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithProviders } from "@/test/utils";
 import { SearchPanel } from "./SearchPanel";
 import * as client from "@/lib/fhir-client";
 
@@ -30,42 +31,42 @@ beforeEach(() => {
 
 describe("SearchPanel", () => {
   it("starts on Patient with a default _count=10 parameter", () => {
-    render(<SearchPanel baseUrl={BASE} />);
-    expect(screen.getByLabelText(/resource type/i)).toHaveValue("Patient");
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    expect(screen.getByRole("combobox", { name: /resource type/i })).toHaveTextContent("Patient");
     expect(screen.getByDisplayValue("_count")).toBeInTheDocument();
     expect(screen.getByDisplayValue("10")).toBeInTheDocument();
   });
 
   it("issues a GET search with the built query string", async () => {
     const user = userEvent.setup();
-    render(<SearchPanel baseUrl={BASE} />);
-    await user.click(screen.getByRole("button", { name: /search/i }));
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
     expect(client.fhirFetch).toHaveBeenCalledWith("/Patient?_count=10", {}, BASE);
   });
 
   it("adds and removes parameter rows", async () => {
     const user = userEvent.setup();
-    render(<SearchPanel baseUrl={BASE} />);
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
     const keyInputs = () => screen.getAllByPlaceholderText(/name \(e\.g\./i);
     expect(keyInputs()).toHaveLength(1);
 
     await user.click(screen.getByRole("button", { name: /add parameter/i }));
     expect(keyInputs()).toHaveLength(2);
 
-    // Remove the first row via its trash button. Before a search runs, the only
-    // text-less (icon-only) buttons on screen are the per-row remove buttons.
+    // Before a search runs, the only text-less (icon-only) buttons are the
+    // per-row remove buttons.
     const trashButtons = screen.getAllByRole("button").filter((b) => b.textContent === "");
     await user.click(trashButtons[0]);
     expect(keyInputs()).toHaveLength(1);
   });
 
-  it("reflects a changed resource type in the request path", async () => {
+  it("reflects a resource type chosen from the combobox in the request path", async () => {
     const user = userEvent.setup();
-    render(<SearchPanel baseUrl={BASE} />);
-    const rt = screen.getByLabelText(/resource type/i);
-    await user.clear(rt);
-    await user.type(rt, "Observation");
-    await user.click(screen.getByRole("button", { name: /search/i }));
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    await user.click(screen.getByRole("combobox", { name: /resource type/i }));
+    await user.type(screen.getByPlaceholderText(/search resource type/i), "Observation");
+    await user.click(screen.getByRole("option", { name: "Observation" }));
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
     expect(client.fhirFetch).toHaveBeenCalledWith("/Observation?_count=10", {}, BASE);
   });
 });
