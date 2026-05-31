@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { ResponseView } from "./ResponseView";
 import { ResourceCombobox } from "./ResourceCombobox";
 import { SearchParamCombobox } from "./SearchParamCombobox";
+import { CopyButton } from "./CopyButton";
 import { useResourceSearchParams } from "@/hooks/use-resource-search-params";
 import { valueHintForType } from "@/lib/fhir-search-params";
 import { cn } from "@/lib/utils";
@@ -203,32 +204,41 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
               const expanded = openRows.has(i);
               return (
                 <li key={i} className="text-sm">
-                  <button
-                    type="button"
-                    onClick={() => toggleRow(i)}
-                    aria-expanded={expanded}
-                    className="flex w-full items-start justify-between gap-2 px-3 py-2 text-left hover:bg-muted/50"
-                  >
-                    <span className="min-w-0">
-                      <code className="font-mono text-xs text-primary">
-                        {r.resourceType}/{r.id}
-                      </code>
-                      {r.meta?.versionId && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          v{r.meta.versionId}
+                  <div className="flex items-start gap-1 pr-2 hover:bg-muted/50">
+                    <button
+                      type="button"
+                      onClick={() => toggleRow(i)}
+                      aria-expanded={expanded}
+                      className="flex min-w-0 flex-1 items-start justify-between gap-2 px-3 py-2 text-left"
+                    >
+                      <span className="min-w-0">
+                        <code className="font-mono text-xs text-primary">
+                          {r.resourceType}/{r.id}
+                        </code>
+                        {r.meta?.versionId && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            v{r.meta.versionId}
+                          </span>
+                        )}
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {summarize(r)}
                         </span>
-                      )}
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {summarize(r)}
                       </span>
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-                        expanded && "rotate-180",
-                      )}
-                    />
-                  </button>
+                      <ChevronDown
+                        className={cn(
+                          "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                          expanded && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    {r.resourceType && r.id && (
+                      <CopyButton
+                        value={`${r.resourceType}/${r.id}`}
+                        ariaLabel={`Copy reference ${r.resourceType}/${r.id}`}
+                        className="mt-1.5"
+                      />
+                    )}
+                  </div>
                   {expanded && (
                     <pre className="max-h-80 overflow-auto border-t bg-muted/30 px-3 py-2 font-mono text-xs leading-relaxed">
                       {JSON.stringify(r, null, 2)}
