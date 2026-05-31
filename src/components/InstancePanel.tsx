@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponseView } from "./ResponseView";
+import { ResourceCombobox } from "./ResourceCombobox";
 
 type Op = "read" | "vread" | "history" | "type-history" | "everything";
 
@@ -74,8 +75,13 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
 
       <div className="grid gap-3 sm:grid-cols-[1fr_2fr_1fr_auto]">
         <div>
-          <Label>Type</Label>
-          <Input value={type} onChange={(e) => setType(e.target.value)} />
+          <Label htmlFor="instance-type">Type</Label>
+          <ResourceCombobox
+            id="instance-type"
+            value={type}
+            onChange={setType}
+            baseUrl={baseUrl}
+          />
         </div>
         <div>
           <Label>ID</Label>

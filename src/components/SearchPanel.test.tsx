@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithProviders } from "@/test/utils";
 import { SearchPanel } from "./SearchPanel";
 import * as client from "@/lib/fhir-client";
 
@@ -30,42 +31,96 @@ beforeEach(() => {
 
 describe("SearchPanel", () => {
   it("starts on Patient with a default _count=10 parameter", () => {
-    render(<SearchPanel baseUrl={BASE} />);
-    expect(screen.getByLabelText(/resource type/i)).toHaveValue("Patient");
-    expect(screen.getByDisplayValue("_count")).toBeInTheDocument();
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    expect(screen.getByRole("combobox", { name: /resource type/i })).toHaveTextContent("Patient");
+    expect(screen.getByRole("combobox", { name: /search parameter name/i })).toHaveTextContent(
+      "_count",
+    );
     expect(screen.getByDisplayValue("10")).toBeInTheDocument();
   });
 
   it("issues a GET search with the built query string", async () => {
     const user = userEvent.setup();
-    render(<SearchPanel baseUrl={BASE} />);
-    await user.click(screen.getByRole("button", { name: /search/i }));
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
     expect(client.fhirFetch).toHaveBeenCalledWith("/Patient?_count=10", {}, BASE);
   });
 
   it("adds and removes parameter rows", async () => {
     const user = userEvent.setup();
-    render(<SearchPanel baseUrl={BASE} />);
-    const keyInputs = () => screen.getAllByPlaceholderText(/name \(e\.g\./i);
-    expect(keyInputs()).toHaveLength(1);
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    const paramNameBoxes = () => screen.getAllByRole("combobox", { name: /search parameter name/i });
+    expect(paramNameBoxes()).toHaveLength(1);
 
     await user.click(screen.getByRole("button", { name: /add parameter/i }));
-    expect(keyInputs()).toHaveLength(2);
+    expect(paramNameBoxes()).toHaveLength(2);
 
-    // Remove the first row via its trash button. Before a search runs, the only
-    // text-less (icon-only) buttons on screen are the per-row remove buttons.
-    const trashButtons = screen.getAllByRole("button").filter((b) => b.textContent === "");
-    await user.click(trashButtons[0]);
-    expect(keyInputs()).toHaveLength(1);
+    await user.click(screen.getAllByRole("button", { name: /remove parameter/i })[0]);
+    expect(paramNameBoxes()).toHaveLength(1);
   });
 
-  it("reflects a changed resource type in the request path", async () => {
+  it("reflects a resource type chosen from the combobox in the request path", async () => {
     const user = userEvent.setup();
-    render(<SearchPanel baseUrl={BASE} />);
-    const rt = screen.getByLabelText(/resource type/i);
-    await user.clear(rt);
-    await user.type(rt, "Observation");
-    await user.click(screen.getByRole("button", { name: /search/i }));
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    await user.click(screen.getByRole("combobox", { name: /resource type/i }));
+    await user.type(screen.getByPlaceholderText(/search resource type/i), "Observation");
+    await user.click(screen.getByRole("option", { name: "Observation" }));
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
     expect(client.fhirFetch).toHaveBeenCalledWith("/Observation?_count=10", {}, BASE);
+  });
+
+  it("lets you pick a curated search parameter and includes it in the request", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    await user.click(screen.getByRole("button", { name: /add parameter/i }));
+
+    const nameBoxes = screen.getAllByRole("combobox", { name: /search parameter name/i });
+    await user.click(nameBoxes[1]);
+    await user.type(screen.getByPlaceholderText(/search patient parameters/i), "gender");
+    await user.click(screen.getByRole("option", { name: /gender/i }));
+
+    const valueInputs = screen.getAllByRole("textbox", { name: /parameter value/i });
+    await user.type(valueInputs[1], "female");
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
+    expect(client.fhirFetch).toHaveBeenCalledWith("/Patient?_count=10&gender=female", {}, BASE);
+  });
+
+  it("submits the search when Enter is pressed in a value field", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    const value = screen.getByRole("textbox", { name: /parameter value/i });
+    await user.clear(value);
+    await user.type(value, "5{Enter}");
+    expect(client.fhirFetch).toHaveBeenCalledWith("/Patient?_count=5", {}, BASE);
+  });
+
+  it("renders result rows with summaries and expands a resource on click", async () => {
+    vi.mocked(client.fhirFetch).mockResolvedValue({
+      ...okBundle(),
+      body: {
+        resourceType: "Bundle",
+        total: 2,
+        entry: [
+          { resource: { resourceType: "Patient", id: "p1", name: [{ given: ["Alice"], family: "Smith" }] } },
+          { resource: { resourceType: "Observation", id: "o1", code: { text: "Heart rate" } } },
+        ],
+      },
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
+
+    const row = await screen.findByRole("button", { name: /Patient\/p1/ });
+    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Observation\/o1/ })).toBeInTheDocument();
+    expect(screen.getByText("Heart rate")).toBeInTheDocument();
+
+    // Collapsed initially; expanding adds a per-row JSON view (the full bundle
+    // JSON already appears once in the response panel below).
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    const before = screen.getAllByText(/"id": "p1"/).length;
+    await user.click(row);
+    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByText(/"id": "p1"/).length).toBe(before + 1);
   });
 });

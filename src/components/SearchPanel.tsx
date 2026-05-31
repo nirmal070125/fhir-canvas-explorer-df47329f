@@ -4,7 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponseView } from "./ResponseView";
-import { Plus, Trash2, Search } from "lucide-react";
+import { ResourceCombobox } from "./ResourceCombobox";
+import { SearchParamCombobox } from "./SearchParamCombobox";
+import { useResourceSearchParams } from "@/hooks/use-resource-search-params";
+import { valueHintForType } from "@/lib/fhir-search-params";
+import { cn } from "@/lib/utils";
+import { Plus, Trash2, Search, ChevronDown } from "lucide-react";
 
 export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const [resourceType, setResourceType] = useState("Patient");
@@ -14,6 +19,16 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const [res, setRes] = useState<FhirResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [usePost, setUsePost] = useState(false);
+  const [openRows, setOpenRows] = useState<Set<number>>(new Set());
+  const { byName } = useResourceSearchParams(resourceType, baseUrl);
+
+  function toggleRow(i: number) {
+    setOpenRows((prev) => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  }
 
   function update(i: number, field: "k" | "v", v: string) {
     setParams((p) => p.map((row, idx) => (idx === i ? { ...row, [field]: v } : row)));
@@ -27,6 +42,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
 
   async function run() {
     setLoading(true);
+    setOpenRows(new Set());
     const qs = params
       .filter((p) => p.k.trim())
       .map((p) => `${encodeURIComponent(p.k)}=${encodeURIComponent(p.v)}`)
@@ -80,11 +96,11 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
       <div className="grid gap-3 sm:grid-cols-[200px_1fr_auto]">
         <div>
           <Label htmlFor="rt">Resource Type</Label>
-          <Input
+          <ResourceCombobox
             id="rt"
             value={resourceType}
-            onChange={(e) => setResourceType(e.target.value)}
-            placeholder="Patient"
+            onChange={setResourceType}
+            baseUrl={baseUrl}
           />
         </div>
         <div>
@@ -93,6 +109,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
             <label className="flex items-center gap-1">
               <input
                 type="radio"
+                name="search-method"
                 checked={!usePost}
                 onChange={() => setUsePost(false)}
               />
@@ -101,6 +118,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
             <label className="flex items-center gap-1">
               <input
                 type="radio"
+                name="search-method"
                 checked={usePost}
                 onChange={() => setUsePost(true)}
               />
@@ -118,25 +136,37 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
 
       <div className="space-y-2">
         <Label>Search Parameters</Label>
-        {params.map((p, i) => (
-          <div key={i} className="flex gap-2">
-            <Input
-              placeholder="name (e.g. family, gender, _count, _sort)"
-              value={p.k}
-              onChange={(e) => update(i, "k", e.target.value)}
-              className="flex-1 font-mono text-sm"
-            />
-            <Input
-              placeholder="value"
-              value={p.v}
-              onChange={(e) => update(i, "v", e.target.value)}
-              className="flex-1 font-mono text-sm"
-            />
-            <Button variant="ghost" size="icon" onClick={() => remove(i)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+        {params.map((p, i) => {
+          const def = byName.get(p.k);
+          return (
+            <div key={i} className="flex gap-2">
+              <div className="flex-1">
+                <SearchParamCombobox
+                  resourceType={resourceType}
+                  baseUrl={baseUrl}
+                  value={p.k}
+                  onChange={(name) => update(i, "k", name)}
+                />
+              </div>
+              <Input
+                aria-label="Parameter value"
+                placeholder={valueHintForType(def?.type)}
+                value={p.v}
+                onChange={(e) => update(i, "v", e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && run()}
+                className="flex-1 font-mono text-sm"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => remove(i)}
+                aria-label="Remove parameter"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        })}
         <Button variant="outline" size="sm" onClick={add}>
           <Plus className="mr-1 h-4 w-4" /> Add parameter
         </Button>
@@ -169,23 +199,50 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
           <ul className="divide-y">
             {bundle.entry.slice(0, 50).map((e: any, i: number) => {
               const r = e.resource ?? {};
+              const expanded = openRows.has(i);
               return (
-                <li key={i} className="px-3 py-2 text-sm">
-                  <code className="font-mono text-xs text-primary">
-                    {r.resourceType}/{r.id}
-                  </code>
-                  {r.meta?.versionId && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      v{r.meta.versionId}
+                <li key={i} className="text-sm">
+                  <button
+                    type="button"
+                    onClick={() => toggleRow(i)}
+                    aria-expanded={expanded}
+                    className="flex w-full items-start justify-between gap-2 px-3 py-2 text-left hover:bg-muted/50"
+                  >
+                    <span className="min-w-0">
+                      <code className="font-mono text-xs text-primary">
+                        {r.resourceType}/{r.id}
+                      </code>
+                      {r.meta?.versionId && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          v{r.meta.versionId}
+                        </span>
+                      )}
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {summarize(r)}
+                      </span>
                     </span>
+                    <ChevronDown
+                      className={cn(
+                        "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                        expanded && "rotate-180",
+                      )}
+                    />
+                  </button>
+                  {expanded && (
+                    <pre className="max-h-80 overflow-auto border-t bg-muted/30 px-3 py-2 font-mono text-xs leading-relaxed">
+                      {JSON.stringify(r, null, 2)}
+                    </pre>
                   )}
-                  <div className="truncate text-xs text-muted-foreground">
-                    {summarize(r)}
-                  </div>
                 </li>
               );
             })}
           </ul>
+          {bundle.entry.length > 50 && (
+            <div className="border-t px-3 py-2 text-xs text-muted-foreground">
+              Showing first 50 of {bundle.entry.length} entries on this page. Use the paging links
+              above to see more.
+            </div>
+          )}
         </div>
       )}
 
@@ -196,12 +253,24 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
 
 function summarize(r: any): string {
   if (!r) return "";
-  if (r.name?.[0]) {
+  // HumanName (Patient, Practitioner, RelatedPerson, …)
+  if (Array.isArray(r.name) && r.name[0]) {
     const n = r.name[0];
-    return [n.given?.join(" "), n.family].filter(Boolean).join(" ");
+    const assembled = [n.prefix?.join(" "), n.given?.join(" "), n.family].filter(Boolean).join(" ");
+    if (assembled || n.text) return assembled || n.text;
   }
-  if (r.code?.text) return r.code.text;
+  if (typeof r.name === "string") return r.name;
+  // Coded concepts (Observation, Condition, Procedure, …)
+  const code = r.code ?? r.medicationCodeableConcept ?? r.vaccineCode;
+  if (code?.text) return code.text;
+  if (code?.coding?.[0]) return code.coding[0].display || code.coding[0].code || "";
+  if (r.title) return r.title;
   if (r.description) return r.description;
-  if (r.status) return `status: ${r.status}`;
-  return "";
+  // Fall back to a few status-ish fields
+  const bits: string[] = [];
+  if (r.status) bits.push(r.status);
+  if (r.class?.code) bits.push(r.class.code);
+  if (r.period?.start) bits.push(r.period.start);
+  if (typeof r.value === "string") bits.push(r.value);
+  return bits.join(" · ");
 }
