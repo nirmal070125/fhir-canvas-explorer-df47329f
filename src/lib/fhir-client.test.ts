@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fhirFetch, getBaseUrl, setBaseUrl, DEFAULT_BASE_URL } from "./fhir-client";
+import {
+  fhirFetch,
+  getBaseUrl,
+  setBaseUrl,
+  isValidBaseUrl,
+  encodeFhirPathSegment,
+  DEFAULT_BASE_URL,
+} from "./fhir-client";
 
 /**
  * Characterization tests for the FHIR HTTP client. These pin down the URL- and
@@ -101,5 +108,65 @@ describe("base URL persistence", () => {
   it("round-trips a stored base URL and strips its trailing slash", () => {
     setBaseUrl("https://example.org/fhir/r4/");
     expect(getBaseUrl()).toBe("https://example.org/fhir/r4");
+  });
+});
+
+describe("isValidBaseUrl", () => {
+  it("accepts same-origin relative paths and http(s) URLs", () => {
+    expect(isValidBaseUrl("/fhir/r4")).toBe(true);
+    expect(isValidBaseUrl("https://example.org/fhir/r4")).toBe(true);
+    expect(isValidBaseUrl("http://localhost:9090/fhir/r4")).toBe(true);
+  });
+
+  it("rejects dangerous schemes, protocol-relative, and empty values", () => {
+    expect(isValidBaseUrl("javascript:alert(1)")).toBe(false);
+    expect(isValidBaseUrl("data:text/html,<script>1</script>")).toBe(false);
+    expect(isValidBaseUrl("file:///etc/passwd")).toBe(false);
+    expect(isValidBaseUrl("ftp://example.org")).toBe(false);
+    expect(isValidBaseUrl("//evil.example")).toBe(false);
+    expect(isValidBaseUrl("")).toBe(false);
+  });
+});
+
+describe("setBaseUrl validation", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("stores nothing and returns false for an invalid URL", () => {
+    expect(setBaseUrl("javascript:alert(1)")).toBe(false);
+    expect(getBaseUrl()).toBe(DEFAULT_BASE_URL);
+  });
+
+  it("stores and returns true for a valid URL", () => {
+    expect(setBaseUrl("https://example.org/fhir/r4")).toBe(true);
+    expect(getBaseUrl()).toBe("https://example.org/fhir/r4");
+  });
+});
+
+describe("encodeFhirPathSegment", () => {
+  it("leaves normal FHIR types/ids unchanged", () => {
+    expect(encodeFhirPathSegment("Patient")).toBe("Patient");
+    expect(encodeFhirPathSegment("abc-123")).toBe("abc-123");
+  });
+  it("escapes characters that could break out of a path segment", () => {
+    expect(encodeFhirPathSegment("../Secret")).toBe("..%2FSecret");
+    expect(encodeFhirPathSegment("1?x=y")).toBe("1%3Fx%3Dy");
+    expect(encodeFhirPathSegment("a#b")).toBe("a%23b");
+  });
+});
+
+describe("fhirFetch scheme guard", () => {
+  it("refuses to dereference non-HTTP(S) URLs", async () => {
+    await expect(fhirFetch("javascript:alert(1)", {}, "https://example.org/fhir/r4")).rejects.toThrow(
+      /non-HTTP/i,
+    );
+    await expect(fhirFetch("data:text/html,x", {}, "https://example.org/fhir/r4")).rejects.toThrow(
+      /non-HTTP/i,
+    );
+  });
+
+  it("still allows absolute http(s) follow-link URLs", async () => {
+    const fetchMock = mockFetchOnce("{}");
+    await fhirFetch("https://other.example/fhir/Patient?page=2", {}, "https://example.org/fhir/r4");
+    expect(fetchMock.mock.calls[0][0]).toBe("https://other.example/fhir/Patient?page=2");
   });
 });

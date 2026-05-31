@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fhirFetch, type FhirResponse } from "@/lib/fhir-client";
+import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,11 +47,12 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
       .filter((p) => p.k.trim())
       .map((p) => `${encodeURIComponent(p.k)}=${encodeURIComponent(p.v)}`)
       .join("&");
+    const rt = encodeFhirPathSegment(resourceType);
     try {
       if (usePost) {
         setRes(
           await fhirFetch(
-            `/${resourceType}/_search`,
+            `/${rt}/_search`,
             {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -61,7 +62,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
           ),
         );
       } else {
-        setRes(await fhirFetch(`/${resourceType}${qs ? `?${qs}` : ""}`, {}, baseUrl));
+        setRes(await fhirFetch(`/${rt}${qs ? `?${qs}` : ""}`, {}, baseUrl));
       }
     } catch (e: any) {
       setRes({

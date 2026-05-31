@@ -46,7 +46,13 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
 
   function save() {
     const clean = value.trim().replace(/\/$/, "");
-    setBaseUrl(clean);
+    // Reject anything that isn't a same-origin path or an http(s) URL
+    // (blocks javascript:, data:, file:, protocol-relative, …).
+    if (!setBaseUrl(clean)) {
+      setStatus("fail");
+      setInfo("Invalid base URL — use a relative path (/fhir/r4) or an http(s) URL");
+      return;
+    }
     onChange(clean);
   }
 
