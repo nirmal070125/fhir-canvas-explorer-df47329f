@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Database, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { loadSampleData, type LoadProgress, type LoadSummary } from "@/lib/sample-data";
+import { loadManifest, loadSampleData, type LoadProgress, type LoadSummary } from "@/lib/sample-data";
 
 interface Props {
   baseUrl: string;
@@ -15,6 +15,22 @@ type State =
 
 export function LoadSampleDataButton({ baseUrl }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
+  // Read the patient count from the manifest so the label never goes stale
+  // when the dataset is resized.
+  const [patientCount, setPatientCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadManifest().then(
+      (m) => !cancelled && setPatientCount(m.patientCount ?? null),
+      () => {
+        /* manifest unavailable — fall back to a generic label */
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function run() {
     setState({
@@ -39,16 +55,18 @@ export function LoadSampleDataButton({ baseUrl }: Props) {
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
         Load sample data
       </Button>
-      <StatusLine state={state} />
+      <StatusLine state={state} patientCount={patientCount} />
     </div>
   );
 }
 
-function StatusLine({ state }: { state: State }) {
+function StatusLine({ state, patientCount }: { state: State; patientCount: number | null }) {
   if (state.kind === "idle") {
     return (
       <span className="text-xs text-muted-foreground">
-        Seeds 10 synthetic patients (Synthea) into the server above.
+        {patientCount != null
+          ? `Seeds ${patientCount} synthetic patients (Synthea) into the server above.`
+          : "Seeds synthetic patient data (Synthea) into the server above."}
       </span>
     );
   }
