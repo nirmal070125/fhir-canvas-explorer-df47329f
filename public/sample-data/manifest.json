@@ -3,7 +3,7 @@
   "generator": "Synthea (synthetichealth/synthea)",
   "fhirVersion": "4.0.1",
   "bundleType": "transaction",
-  "patientCount": 10,
+  "patientCount": 6,
   "notes": "POST each bundle to the FHIR server's base URL as a transaction. Infrastructure bundles (practitioners, hospitals) must load before patient bundles because patient resources reference them.",
   "bundles": [
     "infra-hospitals.json",
@@ -13,11 +13,7 @@
     "patient-03.json",
     "patient-04.json",
     "patient-05.json",
-    "patient-06.json",
-    "patient-07.json",
-    "patient-08.json",
-    "patient-09.json",
-    "patient-10.json"
+    "patient-06.json"
   ],
   "details": [
     {
@@ -67,31 +63,7 @@
       "kind": "patient",
       "label": "Georgeanna Sharyl",
       "resources": 379
-    },
-    {
-      "file": "patient-07.json",
-      "kind": "patient",
-      "label": "Kenny Toy",
-      "resources": 396
-    },
-    {
-      "file": "patient-08.json",
-      "kind": "patient",
-      "label": "Stewart Powlowski",
-      "resources": 396
-    },
-    {
-      "file": "patient-09.json",
-      "kind": "patient",
-      "label": "Sunshine Madlyn",
-      "resources": 421
-    },
-    {
-      "file": "patient-10.json",
-      "kind": "patient",
-      "label": "Modesta Arielle",
-      "resources": 527
     }
   ],
-  "totalResources": 3502
+  "totalResources": 1762
 }

@@ -1,13 +1,14 @@
 # Sample FHIR R4 patient bundles
 
-10 synthetic patients, ~3,500 FHIR resources total. Each `patient-NN.json` is a
+6 synthetic patients, ~1,762 FHIR resources total. Each `patient-NN.json` is a
 FHIR R4 **transaction Bundle**; the explorer's "Load sample data" button POSTs
-each one to the configured server's base URL.
+each one to the configured server's base URL. The dataset is deliberately kept
+small (~5 MB) so it loads on resource-constrained sandboxes.
 
 Generated with [Synthea](https://github.com/synthetichealth/synthea) (Apache 2.0).
 Synthea options used:
 ```
--p 10 Massachusetts
+-p 6 Massachusetts
   --exporter.fhir.use_us_core_ig false
   --exporter.hospital.fhir.export false
   --exporter.practitioner.fhir.export false
@@ -22,7 +23,7 @@ To regenerate:
 ```sh
 git clone --depth 1 https://github.com/synthetichealth/synthea
 cd synthea
-./run_synthea -p 10 Massachusetts \
+./run_synthea -p 6 Massachusetts \
   --exporter.fhir.use_us_core_ig false \
   --exporter.hospital.fhir.export false \
   --exporter.practitioner.fhir.export false \
