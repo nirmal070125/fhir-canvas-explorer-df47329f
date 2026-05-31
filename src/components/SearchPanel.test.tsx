@@ -110,9 +110,10 @@ describe("SearchPanel", () => {
     renderWithProviders(<SearchPanel baseUrl={BASE} />);
     await user.click(screen.getByRole("button", { name: /^search$/i }));
 
-    const row = await screen.findByRole("button", { name: /Patient\/p1/ });
+    // ^-anchored so it matches the expand button, not the "Copy reference …" button.
+    const row = await screen.findByRole("button", { name: /^Patient\/p1/ });
     expect(screen.getByText("Alice Smith")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Observation\/o1/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Observation\/o1/ })).toBeInTheDocument();
     expect(screen.getByText("Heart rate")).toBeInTheDocument();
 
     // Collapsed initially; expanding adds a per-row JSON view (the full bundle
@@ -122,5 +123,30 @@ describe("SearchPanel", () => {
     await user.click(row);
     expect(row).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByText(/"id": "p1"/).length).toBe(before + 1);
+  });
+
+  it("copies a result's reference without expanding the row", async () => {
+    vi.mocked(client.fhirFetch).mockResolvedValue({
+      ...okBundle(),
+      body: {
+        resourceType: "Bundle",
+        entry: [{ resource: { resourceType: "Patient", id: "p1" } }],
+      },
+    });
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    renderWithProviders(<SearchPanel baseUrl={BASE} />);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
+    const copyBtn = await screen.findByRole("button", { name: /copy reference Patient\/p1/i });
+    await user.click(copyBtn);
+
+    expect(writeText).toHaveBeenCalledWith("Patient/p1");
+    // copying must not toggle the row open
+    expect(screen.getByRole("button", { name: /^Patient\/p1/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
   });
 });
