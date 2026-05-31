@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fhirFetch, type FhirResponse } from "@/lib/fhir-client";
+import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,22 +19,25 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
 
   async function run() {
     setLoading(true);
+    const t = encodeFhirPathSegment(type);
+    const i = encodeFhirPathSegment(id);
+    const v = encodeFhirPathSegment(vid);
     let path = "";
     switch (op) {
       case "read":
-        path = `/${type}/${id}`;
+        path = `/${t}/${i}`;
         break;
       case "vread":
-        path = `/${type}/${id}/_history/${vid}`;
+        path = `/${t}/${i}/_history/${v}`;
         break;
       case "history":
-        path = `/${type}/${id}/_history`;
+        path = `/${t}/${i}/_history`;
         break;
       case "type-history":
-        path = `/${type}/_history`;
+        path = `/${t}/_history`;
         break;
       case "everything":
-        path = `/${type}/${id}/$everything`;
+        path = `/${t}/${i}/$everything`;
         break;
     }
     if (extra.trim()) path += (path.includes("?") ? "&" : "?") + extra.trim().replace(/^\?/, "");

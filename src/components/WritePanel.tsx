@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fhirFetch, type FhirResponse } from "@/lib/fhir-client";
+import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,28 +48,30 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
     const headers: Record<string, string> = {};
     let sendBody: string | undefined = body;
 
+    const t = encodeFhirPathSegment(type);
+    const i = encodeFhirPathSegment(id);
     switch (op) {
       case "create":
-        path = `/${type}`;
+        path = `/${t}`;
         method = "POST";
         break;
       case "update":
-        path = `/${type}/${id}`;
+        path = `/${t}/${i}`;
         method = "PUT";
         if (ifMatch.trim()) headers["If-Match"] = ifMatch.trim();
         break;
       case "patch":
-        path = `/${type}/${id}`;
+        path = `/${t}/${i}`;
         method = "PATCH";
         headers["Content-Type"] = "application/merge-patch+json";
         break;
       case "delete":
-        path = `/${type}/${id}`;
+        path = `/${t}/${i}`;
         method = "DELETE";
         sendBody = undefined;
         break;
       case "validate":
-        path = `/${type}/$validate`;
+        path = `/${t}/$validate`;
         method = "POST";
         break;
     }

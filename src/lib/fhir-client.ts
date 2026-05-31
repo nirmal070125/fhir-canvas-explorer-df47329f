@@ -5,14 +5,52 @@ export const DEFAULT_BASE_URL = "/fhir/r4";
 
 const STORAGE_KEY = "fhir-explorer:baseUrl";
 
-export function getBaseUrl(): string {
-  if (typeof window === "undefined") return DEFAULT_BASE_URL;
-  return localStorage.getItem(STORAGE_KEY) || DEFAULT_BASE_URL;
+const HTTP_SCHEME = /^https?:\/\//i;
+// Anything that looks like "<scheme>:" at the very start (e.g. javascript:, data:, file:).
+const ANY_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+
+/**
+ * A base URL is acceptable only if it is a same-origin relative path
+ * (starts with a single "/") or an absolute http(s) URL. This blocks
+ * javascript:, data:, file:, and protocol-relative ("//host") values from
+ * ever being stored or used to build requests.
+ */
+export function isValidBaseUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("//")) return false; // protocol-relative
+  if (trimmed.startsWith("/")) return true; // same-origin relative path
+  if (!HTTP_SCHEME.test(trimmed)) return false;
+  try {
+    const u = new URL(trimmed);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
-export function setBaseUrl(url: string) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, url.replace(/\/$/, ""));
+export function getBaseUrl(): string {
+  if (typeof window === "undefined") return DEFAULT_BASE_URL;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored && isValidBaseUrl(stored) ? stored : DEFAULT_BASE_URL;
+}
+
+/** Persists a base URL after validating it. Returns false (and stores nothing) if invalid. */
+export function setBaseUrl(url: string): boolean {
+  if (typeof window === "undefined") return false;
+  const cleaned = url.trim().replace(/\/$/, "");
+  if (!isValidBaseUrl(cleaned)) return false;
+  localStorage.setItem(STORAGE_KEY, cleaned);
+  return true;
+}
+
+/**
+ * Encode a single FHIR path segment (resource type, id, version) so user input
+ * cannot break out of its URL path segment (e.g. inject "../", an extra "?query"
+ * or "#fragment"). Normal FHIR ids/types are unaffected.
+ */
+export function encodeFhirPathSegment(segment: string): string {
+  return encodeURIComponent(segment);
 }
 
 export interface FhirResponse {
@@ -32,7 +70,19 @@ export async function fhirFetch(
   baseOverride?: string,
 ): Promise<FhirResponse> {
   const base = (baseOverride ?? getBaseUrl()).replace(/\/$/, "");
-  const url = path.startsWith("http") ? path : `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  const isAbsolute = HTTP_SCHEME.test(path);
+  // Absolute URLs reach here from server-supplied Bundle paging/"link" URLs.
+  // Only allow http(s) so a malicious server can't get us to dereference
+  // javascript:, data:, or file: URLs.
+  if (isAbsolute) {
+    const u = new URL(path);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      throw new Error(`Refusing to request non-HTTP(S) URL: ${path}`);
+    }
+  } else if (ANY_SCHEME.test(path)) {
+    throw new Error(`Refusing to request non-HTTP(S) URL: ${path}`);
+  }
+  const url = isAbsolute ? path : `${base}${path.startsWith("/") ? path : `/${path}`}`;
   const method = (init.method || "GET").toUpperCase();
   const headers = new Headers(init.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/fhir+json");
