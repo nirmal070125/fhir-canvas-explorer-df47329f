@@ -8,16 +8,22 @@ export interface CapabilitySearchParam {
   type?: string;
   documentation?: string;
 }
+export interface CapabilityOperation {
+  name: string;
+  definition?: string;
+  documentation?: string;
+}
 export interface CapabilityResource {
   type: string;
   interaction?: { code: string }[];
   searchParam?: CapabilitySearchParam[];
+  operation?: CapabilityOperation[];
 }
 export interface CapabilityStatement {
   resourceType?: string;
   fhirVersion?: string;
   software?: { name?: string; version?: string };
-  rest?: { resource?: CapabilityResource[] }[];
+  rest?: { resource?: CapabilityResource[]; operation?: CapabilityOperation[] }[];
 }
 
 /**
@@ -56,4 +62,10 @@ export function useCapabilityResources(baseUrl: string): Map<string, CapabilityR
 export function useSupportedResourceTypes(baseUrl: string): string[] {
   const resources = useCapabilityResources(baseUrl);
   return useMemo(() => [...resources.keys()].sort((a, b) => a.localeCompare(b)), [resources]);
+}
+
+/** System-level operations the server advertises in rest.operation (may be empty). */
+export function useSystemOperations(baseUrl: string): CapabilityOperation[] {
+  const { data } = useCapabilities(baseUrl);
+  return useMemo(() => data?.rest?.[0]?.operation ?? [], [data]);
 }
