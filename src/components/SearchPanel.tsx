@@ -231,12 +231,8 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
                         )}
                       />
                     </button>
-                    {r.resourceType && r.id && (
-                      <CopyButton
-                        value={`${r.resourceType}/${r.id}`}
-                        ariaLabel={`Copy reference ${r.resourceType}/${r.id}`}
-                        className="mt-1.5"
-                      />
+                    {r.id && (
+                      <CopyButton value={r.id} ariaLabel={`Copy id ${r.id}`} className="mt-1.5" />
                     )}
                   </div>
                   {expanded && (
