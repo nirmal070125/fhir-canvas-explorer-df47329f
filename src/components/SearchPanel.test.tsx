@@ -125,7 +125,7 @@ describe("SearchPanel", () => {
     expect(screen.getAllByText(/"id": "p1"/).length).toBe(before + 1);
   });
 
-  it("copies a result's reference without expanding the row", async () => {
+  it("copies a result's bare id without expanding the row", async () => {
     vi.mocked(client.fhirFetch).mockResolvedValue({
       ...okBundle(),
       body: {
@@ -139,10 +139,10 @@ describe("SearchPanel", () => {
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
 
     await user.click(screen.getByRole("button", { name: /^search$/i }));
-    const copyBtn = await screen.findByRole("button", { name: /copy reference Patient\/p1/i });
+    const copyBtn = await screen.findByRole("button", { name: /copy id p1/i });
     await user.click(copyBtn);
 
-    expect(writeText).toHaveBeenCalledWith("Patient/p1");
+    expect(writeText).toHaveBeenCalledWith("p1");
     // copying must not toggle the row open
     expect(screen.getByRole("button", { name: /^Patient\/p1/ })).toHaveAttribute(
       "aria-expanded",
