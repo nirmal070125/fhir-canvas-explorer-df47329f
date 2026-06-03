@@ -3,16 +3,17 @@ import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ResponseView } from "./ResponseView";
 import { ResourceCombobox } from "./ResourceCombobox";
 import { OperationCombobox } from "./OperationCombobox";
+import { OperationParamCombobox } from "./OperationParamCombobox";
 import { Plus, Trash2, Play } from "lucide-react";
 import { useOperations } from "@/hooks/use-operations";
 import {
   buildOperationQuery,
   buildParametersResource,
+  CURATED_BY_NAME,
   mustUsePost,
   operationValueHint,
   type OperationScope,
@@ -29,10 +30,8 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
   const [resourceType, setResourceType] = useState("Patient");
   const [id, setId] = useState("");
   const [opName, setOpName] = useState("everything");
-  // Values for the operation's documented input parameters, keyed by name.
-  const [values, setValues] = useState<Record<string, string>>({});
-  // Extra/undocumented parameters as free-form rows.
-  const [custom, setCustom] = useState<Array<{ k: string; v: string }>>([]);
+  // Parameter rows (name + value), mirroring the Search panel's UX.
+  const [params, setParams] = useState<Array<{ k: string; v: string }>>([{ k: "", v: "" }]);
   const [methodOverride, setMethodOverride] = useState<"GET" | "POST" | null>(null);
   const [editBody, setEditBody] = useState(false);
   const [rawBody, setRawBody] = useState("");
@@ -42,27 +41,29 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
   const { byName } = useOperations(scope, resourceType, baseUrl);
   const op = byName.get(opName);
   const inParams = useMemo(() => (op?.parameters ?? []).filter((p) => p.use === "in"), [op]);
+  const byParamName = useMemo(() => new Map(inParams.map((p) => [p.name, p])), [inParams]);
 
   // Reset the form whenever the operation context changes, so stale values from
-  // a previous operation never leak into the next request.
+  // a previous operation never leak into the next request. Seed rows with the
+  // operation's required inputs; otherwise start with one empty row.
   useEffect(() => {
-    setValues({});
-    setCustom([]);
+    const required = (CURATED_BY_NAME.get(opName)?.parameters ?? [])
+      .filter((p) => p.use === "in" && p.min)
+      .map((p) => ({ k: p.name, v: "" }));
+    setParams(required.length ? required : [{ k: "", v: "" }]);
     setMethodOverride(null);
     setEditBody(false);
     setRawBody("");
   }, [opName, scope, resourceType]);
 
-  // All filled rows (documented + custom), with their declared types.
-  const filled = useMemo(() => {
-    const known = inParams
-      .map((p) => ({ name: p.name, value: values[p.name] ?? "", type: p.type }))
-      .filter((r) => r.value.trim());
-    const extra = custom
-      .filter((r) => r.k.trim())
-      .map((r) => ({ name: r.k.trim(), value: r.v, type: undefined as string | undefined }));
-    return [...known, ...extra];
-  }, [inParams, values, custom]);
+  // Filled rows, typed from the operation's parameter definitions where known.
+  const filled = useMemo(
+    () =>
+      params
+        .filter((p) => p.k.trim() && p.v.trim())
+        .map((p) => ({ name: p.k.trim(), value: p.v, type: byParamName.get(p.k)?.type })),
+    [params, byParamName],
+  );
 
   const defaultPost = mustUsePost(op, filled);
   const method = methodOverride ?? (defaultPost ? "POST" : "GET");
@@ -90,8 +91,14 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
   const needsId = scope === "instance" && !id.trim();
   const canRun = !!opName.trim() && !needsId && !loading;
 
-  function setValue(name: string, v: string) {
-    setValues((prev) => ({ ...prev, [name]: v }));
+  function update(i: number, field: "k" | "v", v: string) {
+    setParams((p) => p.map((row, idx) => (idx === i ? { ...row, [field]: v } : row)));
+  }
+  function add() {
+    setParams((p) => [...p, { k: "", v: "" }]);
+  }
+  function remove(i: number) {
+    setParams((p) => p.filter((_, idx) => idx !== i));
   }
 
   async function run() {
@@ -212,78 +219,40 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
         )}
       </div>
 
-      {/* Documented input parameters */}
-      {inParams.length > 0 && (
-        <div className="space-y-2">
-          <Label>Parameters</Label>
-          {inParams.map((p) => (
-            <div key={p.name} className="flex items-start gap-2">
-              <div className="w-48 shrink-0 pt-2">
-                <div className="flex items-center gap-1.5">
-                  <code className="font-mono text-xs text-primary">{p.name}</code>
-                  {p.type && (
-                    <Badge variant="outline" className="text-[10px] font-normal">
-                      {p.type}
-                    </Badge>
-                  )}
-                  {p.min ? <span className="text-[10px] text-destructive">required</span> : null}
-                </div>
-                {p.documentation && (
-                  <span className="line-clamp-2 text-[11px] text-muted-foreground">
-                    {p.documentation}
-                  </span>
-                )}
+      {/* Parameters — same combobox-row UX as the Search panel */}
+      <div className="space-y-2">
+        <Label>Parameters</Label>
+        {params.map((p, i) => {
+          const def = byParamName.get(p.k);
+          return (
+            <div key={i} className="flex gap-2">
+              <div className="flex-1">
+                <OperationParamCombobox
+                  params={inParams}
+                  value={p.k}
+                  onChange={(name) => update(i, "k", name)}
+                />
               </div>
               <Input
-                aria-label={`Value for ${p.name}`}
-                placeholder={operationValueHint(p.type)}
-                value={values[p.name] ?? ""}
-                onChange={(e) => setValue(p.name, e.target.value)}
+                aria-label="Parameter value"
+                placeholder={operationValueHint(def?.type)}
+                value={p.v}
+                onChange={(e) => update(i, "v", e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && canRun && run()}
                 className="flex-1 font-mono text-sm"
               />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => remove(i)}
+                aria-label="Remove parameter"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Custom parameters */}
-      <div className="space-y-2">
-        <Label>{inParams.length > 0 ? "Custom parameters" : "Parameters"}</Label>
-        {custom.map((row, i) => (
-          <div key={i} className="flex gap-2">
-            <Input
-              aria-label="Custom parameter name"
-              placeholder="name"
-              value={row.k}
-              onChange={(e) =>
-                setCustom((c) => c.map((r, idx) => (idx === i ? { ...r, k: e.target.value } : r)))
-              }
-              className="flex-1 font-mono text-sm"
-            />
-            <Input
-              aria-label="Custom parameter value"
-              placeholder="value"
-              value={row.v}
-              onChange={(e) =>
-                setCustom((c) => c.map((r, idx) => (idx === i ? { ...r, v: e.target.value } : r)))
-              }
-              className="flex-1 font-mono text-sm"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Remove parameter"
-              onClick={() => setCustom((c) => c.filter((_, idx) => idx !== i))}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCustom((c) => [...c, { k: "", v: "" }])}
-        >
+          );
+        })}
+        <Button variant="outline" size="sm" onClick={add}>
           <Plus className="mr-1 h-4 w-4" /> Add parameter
         </Button>
       </div>

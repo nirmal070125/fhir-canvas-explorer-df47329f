@@ -48,7 +48,11 @@ describe("OperationsPanel", () => {
     const user = userEvent.setup();
     renderWithProviders(<OperationsPanel baseUrl={BASE} />);
     await user.type(screen.getByPlaceholderText("resource id"), "123");
-    await user.type(screen.getByRole("textbox", { name: /value for _count/i }), "10");
+    // Pick the _count parameter in the row's name combobox (Search-style UX).
+    await user.click(screen.getByRole("combobox", { name: /parameter name/i }));
+    await user.type(screen.getByPlaceholderText(/search parameters/i), "_count");
+    await user.click(screen.getByRole("option", { name: /_count/i }));
+    await user.type(screen.getByRole("textbox", { name: /parameter value/i }), "10");
     await user.click(screen.getByRole("button", { name: /invoke/i }));
     expect(client.fhirFetch).toHaveBeenCalledWith("/Patient/123/$everything?_count=10", {}, BASE);
   });
@@ -62,8 +66,13 @@ describe("OperationsPanel", () => {
     await user.type(screen.getByPlaceholderText(/search operations/i), "validate");
     await user.click(screen.getByRole("option", { name: /resource is valid/i }));
 
+    // Pick the `resource` parameter in the row's name combobox.
+    await user.click(screen.getByRole("combobox", { name: /parameter name/i }));
+    await user.type(screen.getByPlaceholderText(/search parameters/i), "resource");
+    await user.click(screen.getByRole("option", { name: /resource to validate/i }));
+
     // Brace-laden JSON is awkward to type via userEvent, so set it directly.
-    const resourceInput = screen.getByRole("textbox", { name: /value for resource/i });
+    const resourceInput = screen.getByRole("textbox", { name: /parameter value/i });
     fireEvent.change(resourceInput, { target: { value: '{"resourceType":"Patient","id":"x"}' } });
 
     await user.click(screen.getByRole("button", { name: /invoke/i }));
