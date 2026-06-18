@@ -13,7 +13,11 @@ export default defineConfig({
   ],
   server: {
     port: 8080,
+    strictPort: true,
     host: true,
+    proxy: {
+      "/fhir/r4": "http://localhost:9090",
+    },
   },
   preview: {
     port: 8080,
