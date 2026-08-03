@@ -8,6 +8,7 @@ import { WritePanel } from "@/components/WritePanel";
 import { OperationsPanel } from "@/components/OperationsPanel";
 import { RawPanel } from "@/components/RawPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ExplorerBusProvider } from "@/lib/explorer-bus";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,17 +29,28 @@ function Index() {
   const [tab, setTab] = useState("search");
 
   return (
+    <ExplorerBusProvider tab={tab} setTab={setTab}>
     <div className="min-h-screen bg-background">
       <BaseUrlBar baseUrl={baseUrl} onChange={setBaseUrl} />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="capability">Capability</TabsTrigger>
-            <TabsTrigger value="search">Search</TabsTrigger>
-            <TabsTrigger value="instance">Read / History</TabsTrigger>
-            <TabsTrigger value="write">Create / Update</TabsTrigger>
-            <TabsTrigger value="operations">Operations</TabsTrigger>
-            <TabsTrigger value="raw">Raw Request</TabsTrigger>
+          <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b bg-transparent p-0">
+            {[
+              ["capability", "Capability"],
+              ["search", "Search"],
+              ["instance", "Read / History"],
+              ["write", "Create / Update"],
+              ["operations", "Operations"],
+              ["raw", "Raw Request"],
+            ].map(([value, label]) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                {label}
+              </TabsTrigger>
+            ))}
           </TabsList>
           <div className="mt-6 rounded-lg border bg-card p-5 shadow-sm">
             <TabsContent value="capability" className="m-0">
@@ -67,5 +79,6 @@ function Index() {
         </p>
       </main>
     </div>
+    </ExplorerBusProvider>
   );
 }

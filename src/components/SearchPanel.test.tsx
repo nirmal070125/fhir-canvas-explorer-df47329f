@@ -118,8 +118,11 @@ describe("SearchPanel", () => {
 
     // Collapsed initially; expanding adds a per-row JSON view (the full bundle
     // JSON already appears once in the response panel below).
+    // The response panel renders the bundle as a JsonView tree (separate
+    // spans), so the raw `"id": "p1"` text only appears in per-row <pre>
+    // dumps added on expand.
     expect(row).toHaveAttribute("aria-expanded", "false");
-    const before = screen.getAllByText(/"id": "p1"/).length;
+    const before = screen.queryAllByText(/"id": "p1"/).length;
     await user.click(row);
     expect(row).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByText(/"id": "p1"/).length).toBe(before + 1);

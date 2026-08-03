@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-client";
+import { PanelSplit } from "./PanelSplit";
+import { useExplorerBus } from "@/lib/explorer-bus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +42,21 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
   const [body, setBody] = useState(SAMPLES.Patient);
   const [res, setRes] = useState<FhirResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const bus = useExplorerBus();
+
+  // "Edit this resource" from the Read tab lands here fully prefilled.
+  useEffect(() => {
+    if (bus?.tab !== "write") return;
+    const p = bus?.consumeWritePrefill();
+    if (p) {
+      setOp(p.op);
+      setType(p.type);
+      setId(p.id);
+      setBody(p.body);
+      setIfMatch(p.ifMatch ?? "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bus?.tab, bus?.writePrefill]);
 
   async function run() {
     setLoading(true);
@@ -88,31 +105,61 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
     }
   }
 
-  const ops: { value: Op; label: string }[] = [
-    { value: "create", label: "Create (POST)" },
-    { value: "update", label: "Update (PUT)" },
-    { value: "patch", label: "Patch" },
-    { value: "delete", label: "Delete" },
-    { value: "validate", label: "$validate" },
+  const ops: { value: Op; label: string; desc: string }[] = [
+    { value: "create", label: "Create", desc: "POST a new resource" },
+    { value: "update", label: "Update", desc: "PUT a full replacement" },
+    { value: "patch", label: "Patch", desc: "Merge-patch selected fields" },
+    { value: "delete", label: "Delete", desc: "Soft-delete by id" },
+    { value: "validate", label: "$validate", desc: "Check without storing" },
   ];
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {ops.map((o) => (
-          <Button
-            key={o.value}
-            size="sm"
-            variant={op === o.value ? "default" : "outline"}
-            onClick={() => setOp(o.value)}
-          >
-            {o.label}
-          </Button>
-        ))}
+  const usesId = op !== "create" && op !== "validate";
+  const usesIfMatch = op === "update";
+  const usesBody = op !== "delete";
+
+  const methodFor: Record<Op, string> = {
+    create: "POST",
+    update: "PUT",
+    patch: "PATCH",
+    delete: "DELETE",
+    validate: "POST",
+  };
+  const previewPath =
+    op === "create"
+      ? `/${type}`
+      : op === "validate"
+        ? `/${type}/$validate`
+        : `/${type}/${id || "{id}"}`;
+
+  const form = (
+    <div className="space-y-5">
+      <div className="space-y-1.5">
+        <Label>Interaction</Label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {ops.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => setOp(o.value)}
+              aria-pressed={op === o.value}
+              className={
+                "rounded-md border px-3 py-2 text-left transition-colors " +
+                (op === o.value
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "bg-card hover:bg-muted/50")
+              }
+            >
+              <span className="block text-sm font-medium">{o.label}</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                {o.desc}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
           <Label htmlFor="write-type">Resource Type</Label>
           <ResourceCombobox
             id="write-type"
@@ -124,44 +171,58 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
             baseUrl={baseUrl}
           />
         </div>
-        <div>
-          <Label>ID</Label>
-          <Input
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            disabled={op === "create" || op === "validate"}
-            className="font-mono text-sm"
-          />
-        </div>
-        <div>
-          <Label>If-Match (PUT only)</Label>
-          <Input
-            value={ifMatch}
-            onChange={(e) => setIfMatch(e.target.value)}
-            placeholder={'W/"2"'}
-            disabled={op !== "update"}
-            className="font-mono text-sm"
-          />
-        </div>
+        {usesId && (
+          <div className="space-y-1.5">
+            <Label>ID</Label>
+            <Input
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+              placeholder="resource id"
+              className="font-mono text-sm"
+            />
+          </div>
+        )}
+        {usesIfMatch && (
+          <div className="space-y-1.5">
+            <Label>
+              If-Match <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              value={ifMatch}
+              onChange={(e) => setIfMatch(e.target.value)}
+              placeholder={'W/"2"'}
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Version ETag — server rejects the update with 412 if the resource changed.
+            </p>
+          </div>
+        )}
       </div>
 
-      {op !== "delete" && (
-        <div>
+      {usesBody && (
+        <div className="space-y-1.5">
           <Label>Body ({op === "patch" ? "JSON Merge Patch" : "FHIR JSON"})</Label>
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            rows={16}
+            rows={14}
             className="font-mono text-xs"
           />
         </div>
       )}
 
-      <Button onClick={run} disabled={loading}>
-        {loading ? "Sending…" : `Send ${op.toUpperCase()}`}
-      </Button>
-
-      <ResponseView res={res} />
+      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+        <code className="min-w-0 flex-1 truncate font-mono text-xs">
+          <span className="mr-2 font-semibold text-primary">{methodFor[op]}</span>
+          {previewPath}
+        </code>
+        <Button onClick={run} disabled={loading} size="sm">
+          {loading ? "Sending…" : "Send"}
+        </Button>
+      </div>
     </div>
   );
+
+  return <PanelSplit form={form} response={<ResponseView res={res} />} />;
 }

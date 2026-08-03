@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ResponseView } from "./ResponseView";
+import { PanelSplit } from "./PanelSplit";
 import { ResourceCombobox } from "./ResourceCombobox";
 import { OperationCombobox } from "./OperationCombobox";
 import { OperationParamCombobox } from "./OperationParamCombobox";
@@ -19,10 +20,10 @@ import {
   type OperationScope,
 } from "@/lib/fhir-operations";
 
-const SCOPES: { value: OperationScope; label: string }[] = [
-  { value: "system", label: "System" },
-  { value: "type", label: "Type" },
-  { value: "instance", label: "Instance" },
+const SCOPES: { value: OperationScope; label: string; desc: string }[] = [
+  { value: "system", label: "System", desc: "Server-wide, e.g. $convert" },
+  { value: "type", label: "Type", desc: "On a resource type, e.g. $validate" },
+  { value: "instance", label: "Instance", desc: "On one resource, e.g. $everything" },
 ];
 
 export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
@@ -129,26 +130,38 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
     }
   }
 
-  return (
-    <div className="space-y-4">
+  const form = (
+    <div className="space-y-5">
       {/* Scope */}
-      <div className="flex flex-wrap gap-2">
-        {SCOPES.map((s) => (
-          <Button
-            key={s.value}
-            size="sm"
-            variant={scope === s.value ? "default" : "outline"}
-            onClick={() => setScope(s.value)}
-          >
-            {s.label}
-          </Button>
-        ))}
+      <div className="space-y-1.5">
+        <Label>Scope</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {SCOPES.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => setScope(s.value)}
+              aria-pressed={scope === s.value}
+              className={
+                "rounded-md border px-3 py-2 text-left transition-colors " +
+                (scope === s.value
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "bg-card hover:bg-muted/50")
+              }
+            >
+              <span className="block text-sm font-medium">{s.label}</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                {s.desc}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Target: resource type / id (for type & instance scope) + operation */}
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+      <div className="grid gap-3 sm:grid-cols-2">
         {scope !== "system" && (
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="op-type">Resource Type</Label>
             <ResourceCombobox
               id="op-type"
@@ -159,7 +172,7 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
           </div>
         )}
         {scope === "instance" && (
-          <div>
+          <div className="space-y-1.5">
             <Label>ID</Label>
             <Input
               value={id}
@@ -169,7 +182,7 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
             />
           </div>
         )}
-        <div>
+        <div className="space-y-1.5">
           <Label>Operation</Label>
           <OperationCombobox
             scope={scope}
@@ -179,20 +192,14 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
             onChange={setOpName}
           />
         </div>
-        <div className="flex items-end">
-          <Button onClick={run} disabled={!canRun} className="w-full">
-            <Play className="mr-2 h-4 w-4" />
-            {loading ? "Running…" : "Invoke"}
-          </Button>
-        </div>
       </div>
 
       {op?.documentation && <p className="text-xs text-muted-foreground">{op.documentation}</p>}
 
       {/* Invocation method */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Label className="m-0">Invoke as</Label>
-        <div className="flex h-9 items-center gap-3 rounded-md border bg-card px-3 text-sm">
+      <div className="space-y-1.5">
+        <Label>Invoke as</Label>
+        <div className="flex h-9 w-fit items-center gap-3 rounded-md border bg-card px-3 text-sm">
           <label className="flex items-center gap-1">
             <input
               type="radio"
@@ -257,12 +264,15 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
         </Button>
       </div>
 
-      {/* Request preview */}
+      {/* Request preview + invoke */}
       <div className="rounded-md border bg-muted/30">
-        <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-xs font-medium text-muted-foreground">Request preview</span>
+        <div className="flex items-center gap-3 px-3 py-2">
+          <code className="min-w-0 flex-1 truncate font-mono text-xs">
+            <span className="mr-2 font-semibold text-primary">{method}</span>
+            {requestPath}
+          </code>
           {method === "POST" && (
-            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+            <label className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
               <input
                 type="checkbox"
                 checked={editBody}
@@ -271,10 +281,11 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
               Edit body
             </label>
           )}
+          <Button onClick={run} disabled={!canRun} size="sm" className="shrink-0">
+            <Play className="mr-1 h-4 w-4" />
+            {loading ? "Running…" : "Invoke"}
+          </Button>
         </div>
-        <pre className="overflow-auto px-3 py-2 font-mono text-xs">
-          {method} {requestPath}
-        </pre>
         {method === "POST" &&
           (editBody ? (
             <Textarea
@@ -290,8 +301,8 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
             </pre>
           ))}
       </div>
-
-      <ResponseView res={res} />
     </div>
   );
+
+  return <PanelSplit form={form} response={<ResponseView res={res} />} />;
 }

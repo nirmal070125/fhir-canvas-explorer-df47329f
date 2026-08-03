@@ -61,7 +61,7 @@ describe("OperationsPanel", () => {
     const user = userEvent.setup();
     renderWithProviders(<OperationsPanel baseUrl={BASE} />);
 
-    await user.click(screen.getByRole("button", { name: "Type" }));
+    await user.click(screen.getByRole("button", { name: /^Type/ }));
     await user.click(screen.getByRole("combobox", { name: /operation/i }));
     await user.type(screen.getByPlaceholderText(/search operations/i), "validate");
     await user.click(screen.getByRole("option", { name: /resource is valid/i }));
@@ -98,7 +98,7 @@ describe("OperationsPanel", () => {
   it("hides the resource-type and id inputs at system scope", async () => {
     const user = userEvent.setup();
     renderWithProviders(<OperationsPanel baseUrl={BASE} />);
-    await user.click(screen.getByRole("button", { name: "System" }));
+    await user.click(screen.getByRole("button", { name: /^System/ }));
     expect(screen.queryByPlaceholderText("resource id")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: /resource type/i })).not.toBeInTheDocument();
   });

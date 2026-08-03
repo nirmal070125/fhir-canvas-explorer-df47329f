@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FhirResponse } from "@/lib/fhir-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, Copy, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { JsonView } from "./JsonView";
 import {
   getOperationOutcome,
   issueText,
@@ -11,8 +12,42 @@ import {
   type OperationOutcomeIssue,
 } from "@/lib/fhir-response";
 
+type WireFormat = "json" | "xml" | "ttl";
+
+const FORMAT_ACCEPT: Record<WireFormat, string> = {
+  json: "application/fhir+json",
+  xml: "application/fhir+xml",
+  ttl: "application/x-turtle",
+};
+
 export function ResponseView({ res }: { res: FhirResponse | null }) {
   const [copied, setCopied] = useState(false);
+  const [format, setFormat] = useState<WireFormat>("json");
+  const [alt, setAlt] = useState<{ format: WireFormat; text: string } | null>(null);
+  const [altLoading, setAltLoading] = useState(false);
+
+  // A new response always starts back at JSON.
+  useEffect(() => {
+    setFormat("json");
+    setAlt(null);
+  }, [res]);
+
+  // The server re-serializes on demand, so XML/Turtle are a refetch of the
+  // same URL with a different Accept header. Only offered for GETs — replaying
+  // a write to change the display format would repeat the side effect.
+  async function switchFormat(f: WireFormat) {
+    setFormat(f);
+    if (f === "json" || !res || alt?.format === f) return;
+    setAltLoading(true);
+    try {
+      const r = await fetch(res.url, { headers: { Accept: FORMAT_ACCEPT[f] } });
+      setAlt({ format: f, text: await r.text() });
+    } catch (e: any) {
+      setAlt({ format: f, text: `// failed to fetch ${f}: ${e?.message ?? "error"}` });
+    } finally {
+      setAltLoading(false);
+    }
+  }
 
   const pretty = useMemo(() => {
     if (!res) return "";
@@ -99,23 +134,96 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
 
       {outcome && <OperationOutcomeView issues={outcome.issue ?? []} />}
 
-      {Object.keys(res.headers).length > 0 && (
-        <details className="rounded-md border bg-card">
-          <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
-            Headers ({Object.keys(res.headers).length})
-          </summary>
-          <pre className="overflow-auto border-t px-3 py-2 font-mono text-xs">
-            {Object.entries(res.headers)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join("\n")}
-          </pre>
-        </details>
+      {Object.keys(res.headers).length > 0 && <HeadersView headers={res.headers} />}
+
+      {res.method === "GET" && res.url && res.status > 0 && (
+        <div className="flex items-center gap-1">
+          {(["json", "xml", "ttl"] as const).map((f) => (
+            <Button
+              key={f}
+              size="sm"
+              variant={format === f ? "default" : "outline"}
+              className="h-7 px-2 text-xs uppercase"
+              onClick={() => switchFormat(f)}
+            >
+              {f === "ttl" ? "Turtle" : f}
+            </Button>
+          ))}
+          {altLoading && <span className="text-xs text-muted-foreground">loading…</span>}
+        </div>
       )}
 
-      <pre className="max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
-        {pretty}
-      </pre>
+      {format === "json" || !alt ? (
+        typeof res.body === "object" && res.body !== null ? (
+          <JsonView value={res.body} />
+        ) : (
+          <pre className="max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
+            {pretty}
+          </pre>
+        )
+      ) : (
+        <pre className="max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
+          {alt.text}
+        </pre>
+      )}
     </div>
+  );
+}
+
+// Headers worth surfacing without expanding — version/caching/concurrency
+// signals a FHIR user actually acts on.
+const NOTABLE_HEADERS = ["etag", "last-modified", "location", "content-type"];
+
+function HeadersView({ headers }: { headers: Record<string, string> }) {
+  const [copied, setCopied] = useState(false);
+  const entries = Object.entries(headers).sort(([a], [b]) => {
+    const ai = NOTABLE_HEADERS.indexOf(a.toLowerCase());
+    const bi = NOTABLE_HEADERS.indexOf(b.toLowerCase());
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.localeCompare(b);
+  });
+
+  async function copyAll() {
+    try {
+      await navigator.clipboard.writeText(entries.map(([k, v]) => `${k}: ${v}`).join("\n"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  return (
+    <details className="group rounded-md border bg-card">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
+        <span className="transition-transform group-open:rotate-90">▸</span>
+        Headers
+        <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-normal">
+          {entries.length}
+        </Badge>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            void copyAll();
+          }}
+          className="ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-muted hover:text-foreground"
+          aria-label="Copy all headers"
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </summary>
+      <div className="divide-y border-t">
+        {entries.map(([k, v]) => (
+          <div key={k} className="grid grid-cols-[minmax(110px,auto)_1fr] gap-x-4 px-3 py-1.5">
+            <span className="truncate font-mono text-xs font-medium text-sky-700 dark:text-sky-300">
+              {k}
+            </span>
+            <span className="break-all font-mono text-xs text-foreground/90">{v}</span>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 

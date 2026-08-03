@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponseView } from "./ResponseView";
 import { ResourceCombobox } from "./ResourceCombobox";
+import { PanelSplit } from "./PanelSplit";
 import { SearchParamCombobox } from "./SearchParamCombobox";
 import { CopyButton } from "./CopyButton";
 import { useResourceSearchParams } from "@/hooks/use-resource-search-params";
@@ -20,6 +21,9 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const [res, setRes] = useState<FhirResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [usePost, setUsePost] = useState(false);
+  const [sortParam, setSortParam] = useState("");
+  const [sortDesc, setSortDesc] = useState(false);
+  const [summary, setSummary] = useState("");
   const [openRows, setOpenRows] = useState<Set<number>>(new Set());
   const { byName } = useResourceSearchParams(resourceType, baseUrl);
 
@@ -41,13 +45,20 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
     setParams((p) => p.filter((_, idx) => idx !== i));
   }
 
+  function buildQuery(): string {
+    const parts = params
+      .filter((p) => p.k.trim())
+      .map((p) => `${encodeURIComponent(p.k)}=${encodeURIComponent(p.v)}`);
+    if (sortParam.trim())
+      parts.push(`_sort=${encodeURIComponent((sortDesc ? "-" : "") + sortParam.trim())}`);
+    if (summary) parts.push(`_summary=${encodeURIComponent(summary)}`);
+    return parts.join("&");
+  }
+
   async function run() {
     setLoading(true);
     setOpenRows(new Set());
-    const qs = params
-      .filter((p) => p.k.trim())
-      .map((p) => `${encodeURIComponent(p.k)}=${encodeURIComponent(p.v)}`)
-      .join("&");
+    const qs = buildQuery();
     const rt = encodeFhirPathSegment(resourceType);
     try {
       if (usePost) {
@@ -93,10 +104,10 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const bundle = res?.body as any;
   const links: Array<{ relation: string; url: string }> = bundle?.link ?? [];
 
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-[200px_1fr_auto]">
-        <div>
+  const form = (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
           <Label htmlFor="rt">Resource Type</Label>
           <ResourceCombobox
             id="rt"
@@ -105,10 +116,10 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
             baseUrl={baseUrl}
           />
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label>Method</Label>
-          <div className="flex h-9 items-center gap-2 rounded-md border bg-card px-3 text-sm">
-            <label className="flex items-center gap-1">
+          <div className="flex h-9 items-center gap-3 rounded-md border bg-card px-3 text-sm">
+            <label className="flex items-center gap-1.5">
               <input
                 type="radio"
                 name="search-method"
@@ -117,7 +128,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
               />
               GET
             </label>
-            <label className="flex items-center gap-1">
+            <label className="flex items-center gap-1.5">
               <input
                 type="radio"
                 name="search-method"
@@ -127,12 +138,6 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
               POST /_search
             </label>
           </div>
-        </div>
-        <div className="flex items-end">
-          <Button onClick={run} disabled={loading} className="w-full">
-            <Search className="mr-2 h-4 w-4" />
-            {loading ? "Searching…" : "Search"}
-          </Button>
         </div>
       </div>
 
@@ -174,6 +179,76 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
         </Button>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto_160px]">
+        <div className="space-y-1.5">
+          <Label htmlFor="sort-param">Sort by</Label>
+          <Input
+            id="sort-param"
+            value={sortParam}
+            onChange={(e) => setSortParam(e.target.value)}
+            placeholder="_lastUpdated, name, date…"
+            className="font-mono text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Direction</Label>
+          <div className="flex h-9 items-center gap-2 rounded-md border bg-card px-3 text-sm">
+            <label className="flex items-center gap-1">
+              <input
+                type="radio"
+                name="sort-dir"
+                checked={!sortDesc}
+                onChange={() => setSortDesc(false)}
+              />
+              Asc
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="radio"
+                name="sort-dir"
+                checked={sortDesc}
+                onChange={() => setSortDesc(true)}
+              />
+              Desc
+            </label>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="summary-mode">_summary</Label>
+          <select
+            id="summary-mode"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-card px-3 text-sm"
+          >
+            <option value="">(none)</option>
+            <option value="true">true</option>
+            <option value="text">text</option>
+            <option value="data">data</option>
+            <option value="count">count</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+        <code className="min-w-0 flex-1 truncate font-mono text-xs">
+          <span className="mr-2 font-semibold text-primary">
+            {usePost ? "POST" : "GET"}
+          </span>
+          {usePost
+            ? `/${resourceType}/_search`
+            : `/${resourceType}${buildQuery() ? `?${buildQuery()}` : ""}`}
+        </code>
+        <Button onClick={run} disabled={loading} size="sm">
+          <Search className="mr-1 h-4 w-4" />
+          {loading ? "Searching…" : "Search"}
+        </Button>
+      </div>
+    </div>
+  );
+
+  const response = (
+    <div className="space-y-4">
       {links.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {links.map((l) => (
@@ -256,6 +331,8 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
       <ResponseView res={res} />
     </div>
   );
+
+  return <PanelSplit form={form} response={response} />;
 }
 
 function summarize(r: any): string {

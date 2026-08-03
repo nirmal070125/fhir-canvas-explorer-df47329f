@@ -1,6 +1,8 @@
 // Relative path — when the UI is co-hosted with the FHIR server under one gateway,
 // browsers resolve this against the current origin (no CORS). Override via the
 // BaseUrlBar to point at any other FHIR R4 endpoint (stored in localStorage).
+import { recordRequest } from "./request-history";
+
 export const DEFAULT_BASE_URL = "/fhir/r4";
 
 const STORAGE_KEY = "fhir-explorer:baseUrl";
@@ -91,7 +93,13 @@ export async function fhirFetch(
   }
 
   const start = performance.now();
-  const res = await fetch(url, { ...init, method, headers });
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, method, headers });
+  } catch (e) {
+    recordRequest({ method, path: isAbsolute ? path : path.startsWith("/") ? path : `/${path}`, status: 0 });
+    throw e;
+  }
   const raw = await res.text();
   const durationMs = Math.round(performance.now() - start);
 
@@ -104,6 +112,12 @@ export async function fhirFetch(
 
   const respHeaders: Record<string, string> = {};
   res.headers.forEach((v, k) => (respHeaders[k] = v));
+
+  recordRequest({
+    method,
+    path: isAbsolute ? path : path.startsWith("/") ? path : `/${path}`,
+    status: res.status,
+  });
 
   return {
     status: res.status,

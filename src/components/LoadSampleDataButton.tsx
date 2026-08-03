@@ -49,13 +49,18 @@ export function LoadSampleDataButton({ baseUrl }: Props) {
 
   const busy = state.kind === "loading";
 
+  const idleTitle =
+    patientCount != null
+      ? `Seeds ${patientCount} synthetic patients (Synthea) into ${baseUrl}`
+      : `Seeds synthetic patient data (Synthea) into ${baseUrl}`;
+
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button onClick={run} disabled={busy} variant="outline" size="sm" title={`POST sample bundles to ${baseUrl}`}>
+      <Button onClick={run} disabled={busy} variant="outline" title={idleTitle}>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
         Load sample data
       </Button>
-      <StatusLine state={state} patientCount={patientCount} />
+      {state.kind !== "idle" && <StatusLine state={state} patientCount={patientCount} />}
     </div>
   );
 }
