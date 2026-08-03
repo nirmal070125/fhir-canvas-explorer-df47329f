@@ -106,8 +106,22 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label>Headers</Label>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Headers</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHeaderRows((rows) => [...rows, { k: "", v: "" }])}
+          >
+            <Plus className="mr-1 h-4 w-4" /> Add header
+          </Button>
+        </div>
+        {headerRows.length === 0 && (
+          <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            No extra headers — Accept and Content-Type are set automatically.
+          </p>
+        )}
         {headerRows.length > 0 && (
           <div className="space-y-2">
             {headerRows.map((r, i) => (
@@ -145,13 +159,6 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
             <option key={h} value={h} />
           ))}
         </datalist>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setHeaderRows((rows) => [...rows, { k: "", v: "" }])}
-        >
-          <Plus className="mr-1 h-4 w-4" /> Add header
-        </Button>
       </div>
 
       {!["GET", "HEAD", "DELETE"].includes(method) && (

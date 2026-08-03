@@ -228,7 +228,12 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
 
       {/* Parameters — same combobox-row UX as the Search panel */}
       <div className="space-y-2">
-        <Label>Parameters</Label>
+        <div className="flex items-center justify-between">
+          <Label>Parameters</Label>
+          <Button variant="outline" size="sm" onClick={add}>
+            <Plus className="mr-1 h-4 w-4" /> Add parameter
+          </Button>
+        </div>
         {params.map((p, i) => {
           const def = byParamName.get(p.k);
           return (
@@ -259,9 +264,6 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
             </div>
           );
         })}
-        <Button variant="outline" size="sm" onClick={add}>
-          <Plus className="mr-1 h-4 w-4" /> Add parameter
-        </Button>
       </div>
 
       {/* Request preview + invoke */}

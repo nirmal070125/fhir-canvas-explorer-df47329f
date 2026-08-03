@@ -142,7 +142,12 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
       </div>
 
       <div className="space-y-2">
-        <Label>Search Parameters</Label>
+        <div className="flex items-center justify-between">
+          <Label>Search Parameters</Label>
+          <Button variant="outline" size="sm" onClick={add}>
+            <Plus className="mr-1 h-4 w-4" /> Add parameter
+          </Button>
+        </div>
         {params.map((p, i) => {
           const def = byName.get(p.k);
           return (
@@ -174,9 +179,6 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
             </div>
           );
         })}
-        <Button variant="outline" size="sm" onClick={add}>
-          <Plus className="mr-1 h-4 w-4" /> Add parameter
-        </Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_auto_160px]">
