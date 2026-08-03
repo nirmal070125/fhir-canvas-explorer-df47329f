@@ -142,3 +142,34 @@
     color: var(--color-foreground);
   }
 }
+
+/* Prism JSON tokens (JsonEditor) — matches the JsonView palette. */
+.token.property {
+  color: var(--color-sky-700, #0369a1);
+}
+.token.string {
+  color: var(--color-emerald-700, #047857);
+}
+.token.number {
+  color: var(--color-amber-700, #b45309);
+}
+.token.boolean,
+.token.null {
+  color: var(--color-violet-700, #6d28d9);
+}
+.token.punctuation {
+  color: var(--color-muted-foreground, #64748b);
+}
+.dark .token.property {
+  color: var(--color-sky-300, #7dd3fc);
+}
+.dark .token.string {
+  color: var(--color-emerald-300, #6ee7b7);
+}
+.dark .token.number {
+  color: var(--color-amber-300, #fcd34d);
+}
+.dark .token.boolean,
+.dark .token.null {
+  color: var(--color-violet-300, #c4b5fd);
+}

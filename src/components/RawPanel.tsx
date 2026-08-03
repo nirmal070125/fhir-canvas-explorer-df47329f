@@ -4,8 +4,8 @@ import { useExplorerBus } from "@/lib/explorer-bus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2 } from "lucide-react";
+import { JsonEditor } from "./JsonEditor";
 import { ResponseView } from "./ResponseView";
 import { PanelSplit } from "./PanelSplit";
 
@@ -157,12 +157,7 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
       {!["GET", "HEAD", "DELETE"].includes(method) && (
         <div className="space-y-1.5">
           <Label>Body</Label>
-          <Textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={10}
-            className="font-mono text-xs"
-          />
+          <JsonEditor value={body} onChange={setBody} rows={10} ariaLabel="Request body" />
         </div>
       )}
 

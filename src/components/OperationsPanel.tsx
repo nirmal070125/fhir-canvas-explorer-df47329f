@@ -3,7 +3,7 @@ import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { JsonEditor } from "./JsonEditor";
 import { ResponseView } from "./ResponseView";
 import { PanelSplit } from "./PanelSplit";
 import { ResourceCombobox } from "./ResourceCombobox";
@@ -288,13 +288,15 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
         </div>
         {method === "POST" &&
           (editBody ? (
-            <Textarea
-              aria-label="Request body"
-              value={rawBody || generatedBody}
-              onChange={(e) => setRawBody(e.target.value)}
-              rows={10}
-              className="rounded-none border-0 border-t font-mono text-xs"
-            />
+            <div className="border-t p-1">
+              <JsonEditor
+                ariaLabel="Request body"
+                value={rawBody || generatedBody}
+                onChange={setRawBody}
+                rows={10}
+                className="border-0"
+              />
+            </div>
           ) : (
             <pre className="max-h-64 overflow-auto border-t px-3 py-2 font-mono text-xs">
               {generatedBody}
