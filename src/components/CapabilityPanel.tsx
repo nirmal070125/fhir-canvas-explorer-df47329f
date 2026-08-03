@@ -98,12 +98,13 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
             </span>
           </div>
         <div className="overflow-auto rounded-md border bg-card">
-          <table className="w-full text-sm">
+          {/* Fixed layout so column widths don't shift between pages. */}
+          <table className="w-full table-fixed text-sm">
             <thead className="bg-muted/50 text-left">
               <tr>
-                <th className="px-3 py-2">Resource</th>
+                <th className="w-80 px-3 py-2">Resource</th>
                 <th className="px-3 py-2">Interactions</th>
-                <th className="px-3 py-2">Search Params</th>
+                <th className="w-32 px-3 py-2">Search Params</th>
               </tr>
             </thead>
             <tbody>

@@ -173,3 +173,38 @@
 .dark .token.null {
   color: var(--color-violet-300, #c4b5fd);
 }
+
+/* Prism XML / Turtle tokens (CodeBlock). */
+.token.tag {
+  color: var(--color-sky-700, #0369a1);
+}
+.token.attr-name {
+  color: var(--color-violet-700, #6d28d9);
+}
+.token.attr-value {
+  color: var(--color-emerald-700, #047857);
+}
+.token.comment,
+.token.prolog,
+.token.cdata {
+  color: var(--color-muted-foreground, #64748b);
+}
+.token.url,
+.token.symbol {
+  color: var(--color-sky-700, #0369a1);
+}
+.token.keyword {
+  color: var(--color-violet-700, #6d28d9);
+}
+.dark .token.tag,
+.dark .token.url,
+.dark .token.symbol {
+  color: var(--color-sky-300, #7dd3fc);
+}
+.dark .token.attr-name,
+.dark .token.keyword {
+  color: var(--color-violet-300, #c4b5fd);
+}
+.dark .token.attr-value {
+  color: var(--color-emerald-300, #6ee7b7);
+}

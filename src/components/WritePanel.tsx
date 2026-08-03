@@ -150,7 +150,7 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
               }
             >
               <span className="block text-sm font-medium">{o.label}</span>
-              <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+              <span className="mt-0.5 block min-h-8 text-[11px] leading-snug text-muted-foreground">
                 {o.desc}
               </span>
             </button>

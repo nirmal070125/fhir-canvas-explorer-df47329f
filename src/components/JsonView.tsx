@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FHIR_R4_RESOURCE_TYPES } from "@/lib/fhir-resources";
 import { useExplorerBus } from "@/lib/explorer-bus";
+import { CodeBlock } from "./CodeBlock";
 
 /**
  * Syntax-highlighted, collapsible JSON tree. FHIR-aware: `Type/id` reference
@@ -30,12 +31,10 @@ function countNodes(v: unknown, budget: { n: number }): void {
 export const JsonView = memo(function JsonView({ value }: { value: unknown }) {
   const budget = { n: 0 };
   countNodes(value, budget);
+  // Too many nodes for the interactive tree — fall back to a flat (but still
+  // highlighted) code block.
   if (budget.n > MAX_NODES) {
-    return (
-      <pre className="max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
-        {JSON.stringify(value, null, 2)}
-      </pre>
-    );
+    return <CodeBlock code={JSON.stringify(value, null, 2)} language="json" />;
   }
   return (
     <div className="max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Copy, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { JsonView } from "./JsonView";
+import { CodeBlock } from "./CodeBlock";
 import {
   getOperationOutcome,
   issueText,
@@ -157,14 +158,10 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
         typeof res.body === "object" && res.body !== null ? (
           <JsonView value={res.body} />
         ) : (
-          <pre className="max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
-            {pretty}
-          </pre>
+          <CodeBlock code={pretty} language="json" />
         )
       ) : (
-        <pre className="max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
-          {alt.text}
-        </pre>
+        <CodeBlock code={alt.text} language={alt.format === "xml" ? "xml" : "turtle"} />
       )}
     </div>
   );
