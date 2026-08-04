@@ -4,9 +4,9 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-markup";
 import "prismjs/components/prism-turtle";
 
-// Prism on multi-megabyte payloads locks the main thread; beyond this size
-// render plain text instead. 1.5MB covers this server's pretty-printed
-// CapabilityStatement (~900KB JSON / ~690KB Turtle) with headroom.
+// Syntax-highlighted read-only code block. Prism locks the main thread on
+// multi-megabyte payloads, so above this size (headroom over this server's
+// ~900KB pretty-printed CapabilityStatement) we render plain text instead.
 const MAX_HIGHLIGHT_CHARS = 1_500_000;
 
 export type CodeLanguage = "json" | "xml" | "turtle";
@@ -17,7 +17,6 @@ const GRAMMAR: Record<CodeLanguage, string> = {
   turtle: "turtle",
 };
 
-/** Syntax-highlighted read-only code block (shares the Prism token palette). */
 export function CodeBlock({ code, language }: { code: string; language: CodeLanguage }) {
   const html = useMemo(() => {
     if (code.length > MAX_HIGHLIGHT_CHARS) return null;
