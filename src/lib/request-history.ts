@@ -1,8 +1,4 @@
-/**
- * Rolling log of recent requests, persisted to localStorage so it survives
- * reloads. fhirFetch records every request; the header menu lists them and
- * replays one via the Raw tab.
- */
+/** Rolling localStorage log of recent requests; fhirFetch records them, the header menu lists and replays them via the Raw tab. */
 
 export interface HistoryEntry {
   method: string;
@@ -28,8 +24,7 @@ export function getHistory(): HistoryEntry[] {
 
 export function recordRequest(entry: Omit<HistoryEntry, "ts">) {
   if (typeof window === "undefined") return;
-  // Collapse consecutive repeats of the same request so paging through a
-  // search doesn't fill the whole list.
+  // Collapse consecutive repeats so paging through a search doesn't fill the whole list.
   const list = getHistory();
   if (list[0]?.method === entry.method && list[0]?.path === entry.path) list.shift();
   list.unshift({ ...entry, ts: Date.now() });

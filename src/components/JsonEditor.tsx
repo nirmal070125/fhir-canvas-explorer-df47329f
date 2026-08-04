@@ -4,11 +4,7 @@ import Prism from "prismjs";
 import "prismjs/components/prism-json";
 import { cn } from "@/lib/utils";
 
-/**
- * JSON editor: react-simple-code-editor (transparent textarea over a
- * highlighted mirror) with Prism's JSON grammar. Native textarea behavior
- * (undo, IME, paste) is preserved; a parse error shows below the editor.
- */
+/** Prism-highlighted JSON editor (transparent textarea over a highlighted mirror); native textarea behavior is preserved and parse errors show below. */
 
 interface Props {
   value: string;

@@ -105,8 +105,7 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
     }
   })();
 
-  // "Edit this resource" appears once a plain read returns a resource; it
-  // jumps to Create/Update with body, id and the ETag (If-Match) prefilled.
+  // "Edit this resource" on a successful read jumps to Create/Update with body, id and ETag prefilled.
   const readBody = res?.body as any;
   const canEdit =
     op === "read" &&

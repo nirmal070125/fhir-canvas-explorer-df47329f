@@ -44,9 +44,7 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
   const inParams = useMemo(() => (op?.parameters ?? []).filter((p) => p.use === "in"), [op]);
   const byParamName = useMemo(() => new Map(inParams.map((p) => [p.name, p])), [inParams]);
 
-  // Reset the form whenever the operation context changes, so stale values from
-  // a previous operation never leak into the next request. Seed rows with the
-  // operation's required inputs; otherwise start with one empty row.
+  // Reset the form when the operation changes (no stale values), seeding rows with its required inputs or one empty row.
   useEffect(() => {
     const required = (CURATED_BY_NAME.get(opName)?.parameters ?? [])
       .filter((p) => p.use === "in" && p.min)

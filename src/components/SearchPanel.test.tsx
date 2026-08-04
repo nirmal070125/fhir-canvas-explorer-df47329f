@@ -116,11 +116,7 @@ describe("SearchPanel", () => {
     expect(screen.getByRole("button", { name: /^Observation\/o1/ })).toBeInTheDocument();
     expect(screen.getByText("Heart rate")).toBeInTheDocument();
 
-    // Collapsed initially; expanding adds a per-row JSON view (the full bundle
-    // JSON already appears once in the response panel below).
-    // The response panel renders the bundle as a JsonView tree (separate
-    // spans), so the raw `"id": "p1"` text only appears in per-row <pre>
-    // dumps added on expand.
+    // Rows start collapsed; the raw `"id": "p1"` text only appears in the per-row <pre> dump added on expand (the response panel renders the bundle as a JsonView tree of separate spans).
     expect(row).toHaveAttribute("aria-expanded", "false");
     const before = screen.queryAllByText(/"id": "p1"/).length;
     await user.click(row);

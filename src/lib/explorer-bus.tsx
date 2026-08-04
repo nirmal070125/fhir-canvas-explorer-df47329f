@@ -1,11 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-/**
- * Cross-tab coordination: lets one panel open another tab with fields
- * prefilled (e.g. "Edit this resource" on a read result jumps to the
- * Create/Update tab, request-history entries replay in the Raw tab).
- * Each prefill is consumed exactly once by the target panel.
- */
+/** Cross-tab coordination: one panel opens another tab with fields prefilled; each prefill is consumed exactly once by the target panel. */
 
 export interface WritePrefill {
   op: "update" | "create" | "patch";

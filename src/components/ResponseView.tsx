@@ -33,9 +33,7 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
     setAlt(null);
   }, [res]);
 
-  // The server re-serializes on demand, so XML/Turtle are a refetch of the
-  // same URL with a different Accept header. Only offered for GETs — replaying
-  // a write to change the display format would repeat the side effect.
+  // XML/Turtle refetch the same URL with a different Accept header; GET-only since replaying a write would repeat its side effect.
   async function switchFormat(f: WireFormat) {
     setFormat(f);
     if (f === "json" || !res || alt?.format === f) return;
@@ -167,8 +165,7 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
   );
 }
 
-// Headers worth surfacing without expanding — version/caching/concurrency
-// signals a FHIR user actually acts on.
+// Headers worth surfacing without expanding — signals a FHIR user actually acts on.
 const NOTABLE_HEADERS = ["etag", "last-modified", "location", "content-type"];
 
 function HeadersView({ headers }: { headers: Record<string, string> }) {

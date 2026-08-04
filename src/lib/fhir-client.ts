@@ -1,6 +1,4 @@
-// Relative path — when the UI is co-hosted with the FHIR server under one gateway,
-// browsers resolve this against the current origin (no CORS). Override via the
-// BaseUrlBar to point at any other FHIR R4 endpoint (stored in localStorage).
+// Default is a relative path so a co-hosted UI resolves against the current origin (no CORS); the BaseUrlBar can override it via localStorage.
 import { recordRequest } from "./request-history";
 
 export const DEFAULT_BASE_URL = "/fhir/r4";
@@ -11,12 +9,7 @@ const HTTP_SCHEME = /^https?:\/\//i;
 // Anything that looks like "<scheme>:" at the very start (e.g. javascript:, data:, file:).
 const ANY_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
-/**
- * A base URL is acceptable only if it is a same-origin relative path
- * (starts with a single "/") or an absolute http(s) URL. This blocks
- * javascript:, data:, file:, and protocol-relative ("//host") values from
- * ever being stored or used to build requests.
- */
+/** Accepts only same-origin relative paths or absolute http(s) URLs, blocking javascript:, data:, file: and protocol-relative values. */
 export function isValidBaseUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed) return false;
@@ -46,11 +39,7 @@ export function setBaseUrl(url: string): boolean {
   return true;
 }
 
-/**
- * Encode a single FHIR path segment (resource type, id, version) so user input
- * cannot break out of its URL path segment (e.g. inject "../", an extra "?query"
- * or "#fragment"). Normal FHIR ids/types are unaffected.
- */
+/** Encode one FHIR path segment so user input can't break out of it ("../", "?query", "#fragment"); normal ids/types are unaffected. */
 export function encodeFhirPathSegment(segment: string): string {
   return encodeURIComponent(segment);
 }
@@ -73,9 +62,7 @@ export async function fhirFetch(
 ): Promise<FhirResponse> {
   const base = (baseOverride ?? getBaseUrl()).replace(/\/$/, "");
   const isAbsolute = HTTP_SCHEME.test(path);
-  // Absolute URLs reach here from server-supplied Bundle paging/"link" URLs.
-  // Only allow http(s) so a malicious server can't get us to dereference
-  // javascript:, data:, or file: URLs.
+  // Absolute URLs come from server-supplied Bundle "link" URLs; allow only http(s) so a malicious server can't make us dereference javascript:/data:/file:.
   if (isAbsolute) {
     const u = new URL(path);
     if (u.protocol !== "http:" && u.protocol !== "https:") {

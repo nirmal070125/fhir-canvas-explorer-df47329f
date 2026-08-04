@@ -15,8 +15,7 @@ type State =
 
 export function LoadSampleDataButton({ baseUrl }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
-  // Read the patient count from the manifest so the label never goes stale
-  // when the dataset is resized.
+  // Read the patient count from the manifest so the label never goes stale when the dataset is resized.
   const [patientCount, setPatientCount] = useState<number | null>(null);
 
   useEffect(() => {

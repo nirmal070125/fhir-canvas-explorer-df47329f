@@ -4,9 +4,7 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-markup";
 import "prismjs/components/prism-turtle";
 
-// Syntax-highlighted read-only code block. Prism locks the main thread on
-// multi-megabyte payloads, so above this size (headroom over this server's
-// ~900KB pretty-printed CapabilityStatement) we render plain text instead.
+// Read-only Prism code block; payloads above this size render as plain text since highlighting them locks the main thread.
 const MAX_HIGHLIGHT_CHARS = 1_500_000;
 
 export type CodeLanguage = "json" | "xml" | "turtle";

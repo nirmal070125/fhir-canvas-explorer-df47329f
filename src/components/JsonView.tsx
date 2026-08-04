@@ -5,14 +5,9 @@ import { FHIR_R4_RESOURCE_TYPES } from "@/lib/fhir-resources";
 import { useExplorerBus } from "@/lib/explorer-bus";
 import { CodeBlock } from "./CodeBlock";
 
-/**
- * Syntax-highlighted, collapsible JSON tree. FHIR-aware: `Type/id` reference
- * strings become links that open the resource in the Read tab, and http(s)
- * URLs become external links.
- */
+/** Collapsible highlighted JSON tree; FHIR `Type/id` references open the Read tab and http(s) URLs become external links. */
 
-// Above this many total nodes the tree renderer becomes sluggish, so fall
-// back to a plain <pre> dump.
+// Above this many total nodes the tree renderer becomes sluggish, so fall back to a flat code block.
 const MAX_NODES = 20_000;
 const COLLAPSE_DEPTH = 4;
 
@@ -31,8 +26,7 @@ function countNodes(v: unknown, budget: { n: number }): void {
 export const JsonView = memo(function JsonView({ value }: { value: unknown }) {
   const budget = { n: 0 };
   countNodes(value, budget);
-  // Too many nodes for the interactive tree — fall back to a flat (but still
-  // highlighted) code block.
+  // Too many nodes for the interactive tree — fall back to a flat highlighted code block.
   if (budget.n > MAX_NODES) {
     return <CodeBlock code={JSON.stringify(value, null, 2)} language="json" />;
   }
