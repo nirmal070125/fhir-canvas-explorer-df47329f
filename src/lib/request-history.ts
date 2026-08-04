@@ -30,9 +30,8 @@ export function recordRequest(entry: Omit<HistoryEntry, "ts">) {
   if (typeof window === "undefined") return;
   // Collapse consecutive repeats of the same request so paging through a
   // search doesn't fill the whole list.
-  const list = getHistory().filter(
-    (e, i) => !(i === 0 && e.method === entry.method && e.path === entry.path),
-  );
+  const list = getHistory();
+  if (list[0]?.method === entry.method && list[0]?.path === entry.path) list.shift();
   list.unshift({ ...entry, ts: Date.now() });
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_ENTRIES)));
