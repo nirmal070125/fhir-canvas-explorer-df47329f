@@ -1,13 +1,15 @@
 // Default is a relative path so a co-hosted UI resolves against the current origin (no CORS); the BaseUrlBar can override it via localStorage.
 import { recordRequest } from "./request-history";
 
-export const DEFAULT_BASE_URL = "/fhir/r4";
+export const DEFAULT_BASE_URL = "http://localhost:9090/fhir/r4";
 
 const STORAGE_KEY = "fhir-explorer:baseUrl";
 
 const HTTP_SCHEME = /^https?:\/\//i;
 // Anything that looks like "<scheme>:" at the very start (e.g. javascript:, data:, file:).
 const ANY_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+// Absolute http(s) targets are routed through the Next.js proxy route to avoid CORS.
+const FHIR_PROXY_PATH = "/api/fhir";
 
 /** Accepts only same-origin relative paths or absolute http(s) URLs, blocking javascript:, data:, file: and protocol-relative values. */
 export function isValidBaseUrl(url: string): boolean {
@@ -79,10 +81,15 @@ export async function fhirFetch(
     headers.set("Content-Type", "application/fhir+json");
   }
 
+  const requestUrl =
+    isValidBaseUrl(url) && HTTP_SCHEME.test(url)
+      ? `${FHIR_PROXY_PATH}?url=${encodeURIComponent(url)}`
+      : url;
+
   const start = performance.now();
   let res: Response;
   try {
-    res = await fetch(url, { ...init, method, headers });
+    res = await fetch(requestUrl, { ...init, method, headers });
   } catch (e) {
     recordRequest({ method, path: isAbsolute ? path : path.startsWith("/") ? path : `/${path}`, status: 0 });
     throw e;

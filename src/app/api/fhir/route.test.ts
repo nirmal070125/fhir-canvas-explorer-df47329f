@@ -1,0 +1,81 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { GET, POST } from "./route";
+
+const TARGET_URL = "https://fhir.example.org/r4/Patient";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("FHIR proxy", () => {
+  it("forwards the target request without browser or reverse-proxy headers", async () => {
+    const upstreamFetch = vi.fn(async (..._args: Parameters<typeof fetch>) => {
+      return new Response('{"resourceType":"Bundle"}', {
+        headers: {
+          "Content-Type": "application/fhir+json",
+          "Set-Cookie": "session=upstream",
+        },
+      });
+    });
+    vi.stubGlobal("fetch", upstreamFetch);
+
+    const request = new Request(`http://localhost/api/fhir?url=${encodeURIComponent(TARGET_URL)}`, {
+      headers: {
+        Accept: "application/fhir+json",
+        Authorization: "Bearer test-token",
+        Cookie: "explorer=session",
+        "X-Forwarded-For": "192.0.2.10",
+      },
+    });
+
+    const response = await GET(request);
+    const [url, init] = upstreamFetch.mock.calls[0];
+    const headers = new Headers(init?.headers);
+
+    expect(url).toBe(TARGET_URL);
+    expect(headers.get("accept")).toBe("application/fhir+json");
+    expect(headers.get("authorization")).toBe("Bearer test-token");
+    expect(headers.get("cookie")).toBeNull();
+    expect(headers.get("x-forwarded-for")).toBeNull();
+    expect(response.headers.get("content-type")).toBe("application/fhir+json");
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("forwards request bodies and methods", async () => {
+    const upstreamFetch = vi.fn(async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 201 }));
+    vi.stubGlobal("fetch", upstreamFetch);
+
+    const request = new Request(`http://localhost/api/fhir?url=${encodeURIComponent(TARGET_URL)}`, {
+      method: "POST",
+      body: '{"resourceType":"Patient"}',
+      headers: { "Content-Type": "application/fhir+json" },
+    });
+
+    const response = await POST(request);
+    const [, init] = upstreamFetch.mock.calls[0];
+
+    expect(init?.method).toBe("POST");
+    expect(new TextDecoder().decode(init?.body as ArrayBuffer)).toBe('{"resourceType":"Patient"}');
+    expect(response.status).toBe(201);
+  });
+
+  it("rejects invalid target URLs before fetching", async () => {
+    const upstreamFetch = vi.fn();
+    vi.stubGlobal("fetch", upstreamFetch);
+
+    const response = await GET(new Request("http://localhost/api/fhir?url=file:///etc/passwd"));
+
+    expect(response.status).toBe(400);
+    expect(upstreamFetch).not.toHaveBeenCalled();
+  });
+
+  it("preserves the complete upstream URL", async () => {
+    const upstreamFetch = vi.fn(async (..._args: Parameters<typeof fetch>) => new Response(null));
+    vi.stubGlobal("fetch", upstreamFetch);
+    const targetUrl = "https://fhir.example.org/r4/ValueSet?url=https://codes.example/";
+
+    await GET(new Request(`http://localhost/api/fhir?url=${encodeURIComponent(targetUrl)}`));
+
+    expect(upstreamFetch.mock.calls[0][0]).toBe(targetUrl);
+  });
+});
