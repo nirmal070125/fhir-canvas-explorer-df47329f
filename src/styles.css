@@ -208,3 +208,23 @@
 .dark .token.attr-value {
   color: var(--color-emerald-300, #6ee7b7);
 }
+
+/* react18-json-view — align with the Prism token palette above. */
+.fhir-json-view .json-view {
+  color: var(--color-foreground);
+  --json-property: var(--color-sky-700, #0369a1);
+  --json-index: var(--color-muted-foreground);
+  --json-number: var(--color-amber-700, #b45309);
+  --json-string: var(--color-emerald-700, #047857);
+  --json-boolean: var(--color-violet-700, #6d28d9);
+  --json-null: var(--color-muted-foreground);
+  font-size: inherit;
+  line-height: inherit;
+  font-family: inherit;
+}
+.dark .fhir-json-view .json-view {
+  --json-property: var(--color-sky-300, #7dd3fc);
+  --json-number: var(--color-amber-300, #fcd34d);
+  --json-string: var(--color-emerald-300, #6ee7b7);
+  --json-boolean: var(--color-violet-300, #c4b5fd);
+}
