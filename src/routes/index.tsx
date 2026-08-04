@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { BaseUrlBar, useBaseUrl } from "@/components/BaseUrlBar";
-import { CapabilityPanel } from "@/components/CapabilityPanel";
-import { SearchPanel } from "@/components/SearchPanel";
-import { InstancePanel } from "@/components/InstancePanel";
-import { WritePanel } from "@/components/WritePanel";
-import { OperationsPanel } from "@/components/OperationsPanel";
-import { RawPanel } from "@/components/RawPanel";
+import { CapabilityPanel } from "@/components/panels/CapabilityPanel";
+import { SearchPanel } from "@/components/panels/SearchPanel";
+import { InstancePanel } from "@/components/panels/InstancePanel";
+import { WritePanel } from "@/components/panels/WritePanel";
+import { OperationsPanel } from "@/components/panels/OperationsPanel";
+import { RawPanel } from "@/components/panels/RawPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExplorerBusProvider } from "@/lib/explorer-bus";
 

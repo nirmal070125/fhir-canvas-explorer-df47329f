@@ -4,11 +4,11 @@ import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil } from "lucide-react";
-import { ResourceCombobox } from "./ResourceCombobox";
+import { ResourceCombobox } from "../ResourceCombobox";
 import { BasePanel } from "./BasePanel";
-import { ChoiceCards } from "./ChoiceCards";
-import { RequestPreviewBar } from "./RequestPreviewBar";
-import { Field } from "./Field";
+import { ChoiceCards } from "../ChoiceCards";
+import { RequestPreviewBar } from "../RequestPreviewBar";
+import { Field } from "../Field";
 import { useExplorerBus, useConsumePrefill } from "@/lib/explorer-bus";
 
 type Op = "read" | "vread" | "history" | "type-history" | "system-history" | "everything";

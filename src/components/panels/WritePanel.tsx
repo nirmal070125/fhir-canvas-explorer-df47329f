@@ -4,12 +4,12 @@ import { useExplorerBus, useConsumePrefill } from "@/lib/explorer-bus";
 import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { JsonEditor } from "./JsonEditor";
-import { ResourceCombobox } from "./ResourceCombobox";
-import { ChoiceCards } from "./ChoiceCards";
-import { RequestPreviewBar } from "./RequestPreviewBar";
+import { JsonEditor } from "../JsonEditor";
+import { ResourceCombobox } from "../ResourceCombobox";
+import { ChoiceCards } from "../ChoiceCards";
+import { RequestPreviewBar } from "../RequestPreviewBar";
 import { BasePanel } from "./BasePanel";
-import { Field } from "./Field";
+import { Field } from "../Field";
 
 type Op = "create" | "update" | "patch" | "delete" | "validate";
 

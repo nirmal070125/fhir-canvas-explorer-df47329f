@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { FhirResponse } from "@/lib/fhir-client";
 import { PanelSplit } from "./PanelSplit";
-import { ResponseView } from "./ResponseView";
+import { ResponseView } from "../ResponseView";
 
 /** Shared panel frame: form fields (children) on the left, ResponseView on the right, with optional `responseExtra` content above the response. */
 export function BasePanel({

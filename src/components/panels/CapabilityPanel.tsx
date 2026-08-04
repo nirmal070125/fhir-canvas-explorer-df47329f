@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fhirFetch } from "@/lib/fhir-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ResponseView } from "./ResponseView";
+import { ResponseView } from "../ResponseView";
 import { Badge } from "@/components/ui/badge";
 import {
   Pagination,

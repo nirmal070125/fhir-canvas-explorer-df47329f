@@ -3,11 +3,11 @@ import { useExplorerBus, useConsumePrefill } from "@/lib/explorer-bus";
 import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { JsonEditor } from "./JsonEditor";
+import { JsonEditor } from "../JsonEditor";
 import { BasePanel } from "./BasePanel";
-import { RequestPreviewBar } from "./RequestPreviewBar";
-import { Field } from "./Field";
-import { RowSection, RemoveRowButton } from "./RowSection";
+import { RequestPreviewBar } from "../RequestPreviewBar";
+import { Field } from "../Field";
+import { RowSection, RemoveRowButton } from "../RowSection";
 
 // Suggested names for the header rows — common FHIR/HTTP request headers.
 const HEADER_SUGGESTIONS = [
