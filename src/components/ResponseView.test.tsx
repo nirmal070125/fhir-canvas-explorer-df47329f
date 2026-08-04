@@ -34,7 +34,7 @@ describe("ResponseView", () => {
   it("renders the JSON body as a highlighted tree", () => {
     render(<ResponseView res={makeResponse()} />);
     // JsonView splits keys and values into separate colored spans.
-    expect(screen.getByText("resourceType")).toBeInTheDocument();
+    expect(screen.getByText('"resourceType"')).toBeInTheDocument();
     expect(screen.getByText('"Patient"')).toBeInTheDocument();
   });
 

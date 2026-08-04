@@ -22,6 +22,20 @@ if (!Element.prototype.releasePointerCapture) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
+if (typeof window !== "undefined" && !window.matchMedia) {
+  // @textea/json-viewer probes prefers-color-scheme on mount.
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+      onchange: null,
+    }) as MediaQueryList;
+}
 if (!("ResizeObserver" in globalThis)) {
   vi.stubGlobal(
     "ResizeObserver",
