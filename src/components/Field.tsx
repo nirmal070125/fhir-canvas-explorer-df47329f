@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { Label } from "@/components/ui/label";
+import { Field as UIField, FieldLabel } from "@/components/ui/field";
 
-/** Standard labeled form field: Label over the control with the panels' shared spacing. */
+/** Thin adapter over shadcn's Field: label-as-prop API with the panels' tighter spacing. */
 export function Field({
   label,
   htmlFor,
   children,
-  className = "space-y-1.5",
+  className = "gap-1.5",
 }: {
   label: ReactNode;
   htmlFor?: string;
@@ -14,9 +14,9 @@ export function Field({
   className?: string;
 }) {
   return (
-    <div className={className}>
-      <Label htmlFor={htmlFor}>{label}</Label>
+    <UIField className={className}>
+      <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>
       {children}
-    </div>
+    </UIField>
   );
 }
