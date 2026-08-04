@@ -9,6 +9,8 @@ import { PanelSplit } from "./PanelSplit";
 import { ResourceCombobox } from "./ResourceCombobox";
 import { OperationCombobox } from "./OperationCombobox";
 import { OperationParamCombobox } from "./OperationParamCombobox";
+import { ChoiceCards } from "./ChoiceCards";
+import { RequestPreviewBar } from "./RequestPreviewBar";
 import { Plus, Trash2, Play } from "lucide-react";
 import { useOperations } from "@/hooks/use-operations";
 import {
@@ -133,27 +135,7 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
       {/* Scope */}
       <div className="space-y-1.5">
         <Label>Scope</Label>
-        <div className="grid grid-cols-3 gap-2">
-          {SCOPES.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              onClick={() => setScope(s.value)}
-              aria-pressed={scope === s.value}
-              className={
-                "rounded-md border px-3 py-2 text-left transition-colors " +
-                (scope === s.value
-                  ? "border-primary bg-primary/5 ring-1 ring-primary"
-                  : "bg-card hover:bg-muted/50")
-              }
-            >
-              <span className="block text-sm font-medium">{s.label}</span>
-              <span className="mt-0.5 block min-h-8 text-[11px] leading-snug text-muted-foreground">
-                {s.desc}
-              </span>
-            </button>
-          ))}
-        </div>
+        <ChoiceCards choices={SCOPES} value={scope} onChange={setScope} gridClass="grid grid-cols-3 gap-2" />
       </div>
 
       {/* Target: resource type / id (for type & instance scope) + operation */}
@@ -266,11 +248,7 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
 
       {/* Request preview + invoke */}
       <div className="rounded-md border bg-muted/30">
-        <div className="flex items-center gap-3 px-3 py-2">
-          <code className="min-w-0 flex-1 truncate font-mono text-xs">
-            <span className="mr-2 font-semibold text-primary">{method}</span>
-            {requestPath}
-          </code>
+        <RequestPreviewBar method={method} path={requestPath} framed={false}>
           {method === "POST" && (
             <label className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
               <input
@@ -285,7 +263,7 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
             <Play className="mr-1 h-4 w-4" />
             {loading ? "Running…" : "Invoke"}
           </Button>
-        </div>
+        </RequestPreviewBar>
         {method === "POST" &&
           (editBody ? (
             <div className="border-t p-1">

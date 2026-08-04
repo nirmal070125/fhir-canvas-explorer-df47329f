@@ -7,6 +7,8 @@ import { Pencil } from "lucide-react";
 import { ResponseView } from "./ResponseView";
 import { ResourceCombobox } from "./ResourceCombobox";
 import { PanelSplit } from "./PanelSplit";
+import { ChoiceCards } from "./ChoiceCards";
+import { RequestPreviewBar } from "./RequestPreviewBar";
 import { useExplorerBus } from "@/lib/explorer-bus";
 
 type Op = "read" | "vread" | "history" | "type-history" | "system-history" | "everything";
@@ -131,27 +133,7 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
     <div className="space-y-5">
       <div className="space-y-1.5">
         <Label>Interaction</Label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {ops.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => setOp(o.value)}
-              aria-pressed={op === o.value}
-              className={
-                "rounded-md border px-3 py-2 text-left transition-colors " +
-                (op === o.value
-                  ? "border-primary bg-primary/5 ring-1 ring-primary"
-                  : "bg-card hover:bg-muted/50")
-              }
-            >
-              <span className="block text-sm font-medium">{o.label}</span>
-              <span className="mt-0.5 block min-h-8 text-[11px] leading-snug text-muted-foreground">
-                {o.desc}
-              </span>
-            </button>
-          ))}
-        </div>
+        <ChoiceCards choices={ops} value={op} onChange={setOp} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -206,16 +188,14 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
         </p>
       </div>
 
-      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
-        <code className="min-w-0 flex-1 truncate font-mono text-xs">
-          <span className="mr-2 font-semibold text-primary">GET</span>
-          {previewPath}
-          {extra.trim() ? `?${extra.trim().replace(/^\?/, "")}` : ""}
-        </code>
+      <RequestPreviewBar
+        method="GET"
+        path={previewPath + (extra.trim() ? `?${extra.trim().replace(/^\?/, "")}` : "")}
+      >
         <Button onClick={run} disabled={loading} size="sm">
           {loading ? "Loading…" : "Run"}
         </Button>
-      </div>
+      </RequestPreviewBar>
     </div>
   );
 

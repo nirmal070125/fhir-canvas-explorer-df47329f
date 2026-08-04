@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { ResponseView } from "./ResponseView";
 import { ResourceCombobox } from "./ResourceCombobox";
 import { PanelSplit } from "./PanelSplit";
+import { RequestPreviewBar } from "./RequestPreviewBar";
 import { SearchParamCombobox } from "./SearchParamCombobox";
 import { CopyButton } from "./CopyButton";
 import { useResourceSearchParams } from "@/hooks/use-resource-search-params";
@@ -232,20 +233,19 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
-        <code className="min-w-0 flex-1 truncate font-mono text-xs">
-          <span className="mr-2 font-semibold text-primary">
-            {usePost ? "POST" : "GET"}
-          </span>
-          {usePost
+      <RequestPreviewBar
+        method={usePost ? "POST" : "GET"}
+        path={
+          usePost
             ? `/${resourceType}/_search`
-            : `/${resourceType}${buildQuery() ? `?${buildQuery()}` : ""}`}
-        </code>
+            : `/${resourceType}${buildQuery() ? `?${buildQuery()}` : ""}`
+        }
+      >
         <Button onClick={run} disabled={loading} size="sm">
           <Search className="mr-1 h-4 w-4" />
           {loading ? "Searching…" : "Search"}
         </Button>
-      </div>
+      </RequestPreviewBar>
     </div>
   );
 
