@@ -28,10 +28,7 @@ function isFhirReference(value: unknown, path: (string | number)[]): value is st
   return !!ref && RESOURCE_TYPE_SET.has(ref[1]) && (key === "reference" || typeof key === "number");
 }
 
-// Base16 theme matching the app's Prism palette. @textea/json-viewer's slot
-// usage (from its source): base07 = object keys, base09 = strings,
-// base0B = numbers, base0D = dates, base0E = booleans, base08/base0F = misc
-// scalars, base03/base04 = punctuation and item counts.
+// Base16 theme matching the app's Prism palette; @textea/json-viewer slot usage (from its source): base07 keys, base09 strings, base0B numbers, base0D dates, base0E booleans, base08/base0F misc scalars, base03/base04 punctuation and counts.
 const FHIR_THEME = {
   scheme: "fhir-explorer",
   author: "wso2",
