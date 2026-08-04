@@ -8,6 +8,7 @@ import { BasePanel } from "./BasePanel";
 import { RequestPreviewBar } from "../RequestPreviewBar";
 import { SearchParamCombobox } from "../SearchParamCombobox";
 import { CopyButton } from "../CopyButton";
+import { CodeBlock } from "../CodeBlock";
 import { Field } from "../Field";
 import { RowSection, RemoveRowButton } from "../RowSection";
 import { useResourceSearchParams } from "@/hooks/use-resource-search-params";
@@ -268,9 +269,11 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
                     )}
                   </div>
                   {expanded && (
-                    <pre className="max-h-80 overflow-auto border-t bg-muted/30 px-3 py-2 font-mono text-xs leading-relaxed">
-                      {JSON.stringify(r, null, 2)}
-                    </pre>
+                    <CodeBlock
+                      code={JSON.stringify(r, null, 2)}
+                      language="json"
+                      className="max-h-80 rounded-none border-0 border-t bg-muted/30 px-3 py-2"
+                    />
                   )}
                 </li>
               );

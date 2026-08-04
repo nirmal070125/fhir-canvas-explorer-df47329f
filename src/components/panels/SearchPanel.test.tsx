@@ -116,12 +116,12 @@ describe("SearchPanel", () => {
     expect(screen.getByRole("button", { name: /^Observation\/o1/ })).toBeInTheDocument();
     expect(screen.getByText("Heart rate")).toBeInTheDocument();
 
-    // Rows start collapsed; the raw `"id": "p1"` text only appears in the per-row <pre> dump added on expand (the response panel renders the bundle as a JsonView tree of separate spans).
+    // Rows start collapsed; expanding adds a highlighted CodeBlock dump, where Prism renders the id as its own `"p1"` string token.
     expect(row).toHaveAttribute("aria-expanded", "false");
-    const before = screen.queryAllByText(/"id": "p1"/).length;
+    const before = screen.queryAllByText('"p1"').length;
     await user.click(row);
     expect(row).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getAllByText(/"id": "p1"/).length).toBe(before + 1);
+    expect(screen.getAllByText('"p1"').length).toBe(before + 1);
   });
 
   it("copies a result's bare id without expanding the row", async () => {
