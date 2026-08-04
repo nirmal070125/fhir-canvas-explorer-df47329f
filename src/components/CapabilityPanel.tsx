@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { fhirFetch, type FhirResponse } from "@/lib/fhir-client";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fhirFetch } from "@/lib/fhir-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResponseView } from "./ResponseView";
@@ -17,8 +18,9 @@ const PAGE_SIZE = 10;
 
 /** Page numbers to render: first, last, and a window around the current page. */
 function pageNumbers(current: number, total: number): Array<number | "…"> {
-  const pages = new Set<number>([1, total, current - 1, current, current + 1]);
-  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const candidates = [1, total, current - 1, current, current + 1];
+  const inRange = candidates.filter((p) => p >= 1 && p <= total);
+  const sorted = [...new Set(inRange)].sort((a, b) => a - b);
   const out: Array<number | "…"> = [];
   let prev = 0;
   for (const p of sorted) {
@@ -29,38 +31,31 @@ function pageNumbers(current: number, total: number): Array<number | "…"> {
   return out;
 }
 
+/** Case-insensitive match of resource rows against the type filter text. */
+function filterByType(resources: any[], filter: string): any[] {
+  const q = filter.trim().toLowerCase();
+  if (!q) return resources;
+  return resources.filter((r) => String(r.type ?? "").toLowerCase().includes(q));
+}
+
 export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
-  const [res, setRes] = useState<FhirResponse | null>(null);
-  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState("");
 
-  async function load() {
-    setLoading(true);
-    try {
-      setRes(await fhirFetch("/metadata", {}, baseUrl));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl]);
+  const {
+    data: res,
+    isFetching: loading,
+    refetch,
+  } = useQuery({
+    queryKey: ["metadata-response", baseUrl],
+    queryFn: () => fhirFetch("/metadata", {}, baseUrl),
+    enabled: !!baseUrl,
+  });
 
   const cs = res?.body as any;
   const resources: any[] = cs?.rest?.[0]?.resource ?? [];
 
-  const filtered = useMemo(
-    () =>
-      filter.trim()
-        ? resources.filter((r) =>
-            String(r.type ?? "").toLowerCase().includes(filter.trim().toLowerCase()),
-          )
-        : resources,
-    [resources, filter],
-  );
+  const filtered = useMemo(() => filterByType(resources, filter), [resources, filter]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -76,7 +71,7 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
             </>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={() => refetch()} disabled={loading}>
           {loading ? "Loading…" : "Reload"}
         </Button>
       </div>
@@ -179,7 +174,7 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
         </div>
       )}
 
-      <ResponseView res={res} />
+      <ResponseView res={res ?? null} />
     </div>
   );
 }
