@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
-import { fhirFetch, type FhirResponse } from "@/lib/fhir-client";
-import { useExplorerBus } from "@/lib/explorer-bus";
+import { useState } from "react";
+import { useExplorerBus, useConsumePrefill } from "@/lib/explorer-bus";
+import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Plus, Trash2 } from "lucide-react";
 import { JsonEditor } from "./JsonEditor";
-import { ResponseView } from "./ResponseView";
-import { PanelSplit } from "./PanelSplit";
+import { BasePanel } from "./BasePanel";
 import { RequestPreviewBar } from "./RequestPreviewBar";
+import { Field } from "./Field";
+import { RowSection, RemoveRowButton } from "./RowSection";
 
 // Suggested names for the header rows — common FHIR/HTTP request headers.
 const HEADER_SUGGESTIONS = [
@@ -33,58 +32,35 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
   const [path, setPath] = useState("/metadata");
   const [body, setBody] = useState("");
   const [headerRows, setHeaderRows] = useState<HeaderRow[]>([]);
-  const [res, setRes] = useState<FhirResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { res, loading, run: send } = useFhirRequest(baseUrl);
   const bus = useExplorerBus();
 
   // Request-history entries replay here with method + path prefilled.
-  useEffect(() => {
-    if (bus?.tab !== "raw") return;
-    const p = bus?.consumeRawPrefill();
-    if (p) {
-      setMethod(p.method);
-      setPath(p.path);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bus?.tab, bus?.rawPrefill]);
+  useConsumePrefill(bus, "raw", bus?.rawPrefill, bus?.consumeRawPrefill, (p) => {
+    setMethod(p.method);
+    setPath(p.path);
+  });
 
   function updateHeader(i: number, field: "k" | "v", value: string) {
     setHeaderRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
   }
 
-  async function run() {
-    setLoading(true);
+  function run() {
     const hdrs: Record<string, string> = {};
     headerRows.forEach((r) => {
       if (r.k.trim()) hdrs[r.k.trim()] = r.v.trim();
     });
-    try {
-      setRes(
-        await fhirFetch(
-          path,
-          {
-            method,
-            headers: hdrs,
-            body: ["GET", "HEAD", "DELETE"].includes(method) ? undefined : body,
-          },
-          baseUrl,
-        ),
-      );
-    } catch (e: any) {
-      setRes({
-        status: 0, ok: false, headers: {}, body: { error: e?.message }, raw: "",
-        url: "", method, durationMs: 0,
-      });
-    } finally {
-      setLoading(false);
-    }
+    void send(path, {
+      method,
+      headers: hdrs,
+      body: ["GET", "HEAD", "DELETE"].includes(method) ? undefined : body,
+    });
   }
 
-  const form = (
-    <div className="space-y-5">
+  return (
+    <BasePanel res={res}>
       <div className="grid gap-3 sm:grid-cols-[130px_1fr]">
-        <div className="space-y-1.5">
-          <Label>Method</Label>
+        <Field label="Method">
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value)}
@@ -94,9 +70,8 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
               <option key={m}>{m}</option>
             ))}
           </select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Path</Label>
+        </Field>
+        <Field label="Path">
           <Input
             value={path}
             onChange={(e) => setPath(e.target.value)}
@@ -104,20 +79,14 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
             placeholder="/Patient?name=smith"
             className="font-mono text-sm"
           />
-        </div>
+        </Field>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Headers</Label>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setHeaderRows((rows) => [...rows, { k: "", v: "" }])}
-          >
-            <Plus className="mr-1 h-4 w-4" /> Add header
-          </Button>
-        </div>
+      <RowSection
+        label="Headers"
+        addLabel="Add header"
+        onAdd={() => setHeaderRows((rows) => [...rows, { k: "", v: "" }])}
+      >
         {headerRows.length === 0 && (
           <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             No extra headers — Accept and Content-Type are set automatically.
@@ -143,14 +112,10 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
                   placeholder="value"
                   className="flex-1 font-mono text-sm"
                 />
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <RemoveRowButton
                   onClick={() => setHeaderRows((rows) => rows.filter((_, idx) => idx !== i))}
-                  aria-label="Remove header"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                  ariaLabel="Remove header"
+                />
               </div>
             ))}
           </div>
@@ -160,13 +125,12 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
             <option key={h} value={h} />
           ))}
         </datalist>
-      </div>
+      </RowSection>
 
       {!["GET", "HEAD", "DELETE"].includes(method) && (
-        <div className="space-y-1.5">
-          <Label>Body</Label>
+        <Field label="Body">
           <JsonEditor value={body} onChange={setBody} rows={10} ariaLabel="Request body" />
-        </div>
+        </Field>
       )}
 
       <RequestPreviewBar method={method} path={path || "/"}>
@@ -174,8 +138,6 @@ export function RawPanel({ baseUrl }: { baseUrl: string }) {
           {loading ? "Sending…" : "Send"}
         </Button>
       </RequestPreviewBar>
-    </div>
+    </BasePanel>
   );
-
-  return <PanelSplit form={form} response={<ResponseView res={res} />} />;
 }

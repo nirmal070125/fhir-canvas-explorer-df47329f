@@ -1,26 +1,26 @@
 import { useState } from "react";
-import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-client";
+import { encodeFhirPathSegment } from "@/lib/fhir-client";
+import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ResponseView } from "./ResponseView";
 import { ResourceCombobox } from "./ResourceCombobox";
-import { PanelSplit } from "./PanelSplit";
+import { BasePanel } from "./BasePanel";
 import { RequestPreviewBar } from "./RequestPreviewBar";
 import { SearchParamCombobox } from "./SearchParamCombobox";
 import { CopyButton } from "./CopyButton";
+import { Field } from "./Field";
+import { RowSection, RemoveRowButton } from "./RowSection";
 import { useResourceSearchParams } from "@/hooks/use-resource-search-params";
 import { valueHintForType } from "@/lib/fhir-search-params";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
 
 export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const [resourceType, setResourceType] = useState("Patient");
   const [params, setParams] = useState<Array<{ k: string; v: string }>>([
     { k: "_count", v: "10" },
   ]);
-  const [res, setRes] = useState<FhirResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { res, loading, run: send } = useFhirRequest(baseUrl);
   const [usePost, setUsePost] = useState(false);
   const [sortParam, setSortParam] = useState("");
   const [sortDesc, setSortDesc] = useState(false);
@@ -56,69 +56,40 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
     return parts.join("&");
   }
 
-  async function run() {
-    setLoading(true);
+  function run() {
     setOpenRows(new Set());
     const qs = buildQuery();
     const rt = encodeFhirPathSegment(resourceType);
-    try {
-      if (usePost) {
-        setRes(
-          await fhirFetch(
-            `/${rt}/_search`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: qs,
-            },
-            baseUrl,
-          ),
-        );
-      } else {
-        setRes(await fhirFetch(`/${rt}${qs ? `?${qs}` : ""}`, {}, baseUrl));
-      }
-    } catch (e: any) {
-      setRes({
-        status: 0,
-        ok: false,
-        headers: {},
-        body: { error: e?.message || "Network error" },
-        raw: "",
-        url: "",
-        method: usePost ? "POST" : "GET",
-        durationMs: 0,
+    if (usePost) {
+      void send(`/${rt}/_search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: qs,
       });
-    } finally {
-      setLoading(false);
+    } else {
+      void send(`/${rt}${qs ? `?${qs}` : ""}`);
     }
   }
 
-  async function followLink(url: string) {
-    setLoading(true);
-    try {
-      setRes(await fhirFetch(url, {}, baseUrl));
-    } finally {
-      setLoading(false);
-    }
+  function followLink(url: string) {
+    void send(url);
   }
 
   const bundle = res?.body as any;
   const links: Array<{ relation: string; url: string }> = bundle?.link ?? [];
 
   const form = (
-    <div className="space-y-5">
+    <>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="rt">Resource Type</Label>
+        <Field label="Resource Type" htmlFor="rt">
           <ResourceCombobox
             id="rt"
             value={resourceType}
             onChange={setResourceType}
             baseUrl={baseUrl}
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Method</Label>
+        </Field>
+        <Field label="Method">
           <div className="flex h-9 items-center gap-3 rounded-md border bg-card px-3 text-sm">
             <label className="flex items-center gap-1.5">
               <input
@@ -139,16 +110,10 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
               POST /_search
             </label>
           </div>
-        </div>
+        </Field>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Search Parameters</Label>
-          <Button variant="outline" size="sm" onClick={add}>
-            <Plus className="mr-1 h-4 w-4" /> Add parameter
-          </Button>
-        </div>
+      <RowSection label="Search Parameters" addLabel="Add parameter" onAdd={add}>
         {params.map((p, i) => {
           const def = byName.get(p.k);
           return (
@@ -169,22 +134,14 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
                 onKeyDown={(e) => e.key === "Enter" && run()}
                 className="flex-1 font-mono text-sm"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(i)}
-                aria-label="Remove parameter"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <RemoveRowButton onClick={() => remove(i)} ariaLabel="Remove parameter" />
             </div>
           );
         })}
-      </div>
+      </RowSection>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_auto_160px]">
-        <div className="space-y-1.5">
-          <Label htmlFor="sort-param">Sort by</Label>
+        <Field label="Sort by" htmlFor="sort-param">
           <Input
             id="sort-param"
             value={sortParam}
@@ -192,9 +149,8 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
             placeholder="_lastUpdated, name, date…"
             className="font-mono text-sm"
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Direction</Label>
+        </Field>
+        <Field label="Direction">
           <div className="flex h-9 items-center gap-2 rounded-md border bg-card px-3 text-sm">
             <label className="flex items-center gap-1">
               <input
@@ -215,9 +171,8 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
               Desc
             </label>
           </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="summary-mode">_summary</Label>
+        </Field>
+        <Field label="_summary" htmlFor="summary-mode">
           <select
             id="summary-mode"
             value={summary}
@@ -230,7 +185,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
             <option value="data">data</option>
             <option value="count">count</option>
           </select>
-        </div>
+        </Field>
       </div>
 
       <RequestPreviewBar
@@ -246,11 +201,11 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
           {loading ? "Searching…" : "Search"}
         </Button>
       </RequestPreviewBar>
-    </div>
+    </>
   );
 
-  const response = (
-    <div className="space-y-4">
+  const responseExtra = (
+    <>
       {links.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {links.map((l) => (
@@ -329,12 +284,14 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
           )}
         </div>
       )}
-
-      <ResponseView res={res} />
-    </div>
+    </>
   );
 
-  return <PanelSplit form={form} response={response} />;
+  return (
+    <BasePanel res={res} responseExtra={responseExtra}>
+      {form}
+    </BasePanel>
+  );
 }
 
 function summarize(r: any): string {

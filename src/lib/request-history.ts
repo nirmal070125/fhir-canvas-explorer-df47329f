@@ -22,17 +22,28 @@ export function getHistory(): HistoryEntry[] {
   }
 }
 
-export function recordRequest(entry: Omit<HistoryEntry, "ts">) {
-  if (typeof window === "undefined") return;
-  // Collapse consecutive repeats so paging through a search doesn't fill the whole list.
-  const list = getHistory();
-  if (list[0]?.method === entry.method && list[0]?.path === entry.path) list.shift();
-  list.unshift({ ...entry, ts: Date.now() });
+function isSameRequest(a: Pick<HistoryEntry, "method" | "path">, b: Pick<HistoryEntry, "method" | "path">) {
+  return a.method === b.method && a.path === b.path;
+}
+
+function saveHistory(list: HistoryEntry[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_ENTRIES)));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   } catch {
     /* storage full/unavailable — history is best-effort */
   }
+}
+
+export function recordRequest(entry: Omit<HistoryEntry, "ts">) {
+  if (typeof window === "undefined") return;
+
+  const history = getHistory();
+  const latest = history[0];
+  // Collapse consecutive repeats so paging through a search doesn't fill the whole list.
+  if (latest && isSameRequest(latest, entry)) history.shift();
+
+  const updated = [{ ...entry, ts: Date.now() }, ...history].slice(0, MAX_ENTRIES);
+  saveHistory(updated);
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 

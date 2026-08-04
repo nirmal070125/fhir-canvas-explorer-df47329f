@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
-import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-client";
+import { useState } from "react";
+import { encodeFhirPathSegment } from "@/lib/fhir-client";
+import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Pencil } from "lucide-react";
-import { ResponseView } from "./ResponseView";
 import { ResourceCombobox } from "./ResourceCombobox";
-import { PanelSplit } from "./PanelSplit";
+import { BasePanel } from "./BasePanel";
 import { ChoiceCards } from "./ChoiceCards";
 import { RequestPreviewBar } from "./RequestPreviewBar";
-import { useExplorerBus } from "@/lib/explorer-bus";
+import { Field } from "./Field";
+import { useExplorerBus, useConsumePrefill } from "@/lib/explorer-bus";
 
 type Op = "read" | "vread" | "history" | "type-history" | "system-history" | "everything";
 
@@ -19,25 +19,18 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
   const [id, setId] = useState("");
   const [vid, setVid] = useState("1");
   const [extra, setExtra] = useState("");
-  const [res, setRes] = useState<FhirResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { res, loading, run: send } = useFhirRequest(baseUrl);
   const bus = useExplorerBus();
 
   // Reference clicks in a JSON view land here with a type+id to read.
-  useEffect(() => {
-    if (bus?.tab !== "instance") return;
-    const p = bus?.consumeReadPrefill();
-    if (p) {
-      setOp("read");
-      setType(p.type);
-      setId(p.id);
-      void runWith("read", p.type, p.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bus?.tab, bus?.readPrefill]);
+  useConsumePrefill(bus, "instance", bus?.readPrefill, bus?.consumeReadPrefill, (p) => {
+    setOp("read");
+    setType(p.type);
+    setId(p.id);
+    runWith("read", p.type, p.id);
+  });
 
-  async function runWith(op: Op, type: string, id: string) {
-    setLoading(true);
+  function runWith(op: Op, type: string, id: string) {
     const t = encodeFhirPathSegment(type);
     const i = encodeFhirPathSegment(id);
     const v = encodeFhirPathSegment(vid);
@@ -63,16 +56,7 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
         break;
     }
     if (extra.trim()) path += (path.includes("?") ? "&" : "?") + extra.trim().replace(/^\?/, "");
-    try {
-      setRes(await fhirFetch(path, {}, baseUrl));
-    } catch (e: any) {
-      setRes({
-        status: 0, ok: false, headers: {}, body: { error: e?.message }, raw: "",
-        url: "", method: "GET", durationMs: 0,
-      });
-    } finally {
-      setLoading(false);
-    }
+    void send(path);
   }
 
   const run = () => runWith(op, type, id);
@@ -129,28 +113,35 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
     });
   }
 
-  const form = (
-    <div className="space-y-5">
-      <div className="space-y-1.5">
-        <Label>Interaction</Label>
+  return (
+    <BasePanel
+      res={res}
+      responseExtra={
+        canEdit && (
+          <Button size="sm" variant="secondary" onClick={editCurrent}>
+            <Pencil className="mr-1 h-4 w-4" />
+            Edit this resource
+          </Button>
+        )
+      }
+    >
+      <Field label="Interaction">
         <ChoiceCards choices={ops} value={op} onChange={setOp} />
-      </div>
+      </Field>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {usesType && (
-          <div className="space-y-1.5">
-            <Label htmlFor="instance-type">Resource Type</Label>
+          <Field label="Resource Type" htmlFor="instance-type">
             <ResourceCombobox
               id="instance-type"
               value={type}
               onChange={setType}
               baseUrl={baseUrl}
             />
-          </div>
+          </Field>
         )}
         {usesId && (
-          <div className="space-y-1.5">
-            <Label>ID</Label>
+          <Field label="ID">
             <Input
               value={id}
               onChange={(e) => setId(e.target.value)}
@@ -158,11 +149,10 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
               placeholder="resource id"
               className="font-mono text-sm"
             />
-          </div>
+          </Field>
         )}
         {usesVid && (
-          <div className="space-y-1.5">
-            <Label>Version</Label>
+          <Field label="Version">
             <Input
               value={vid}
               onChange={(e) => setVid(e.target.value)}
@@ -170,12 +160,17 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
               placeholder="version id"
               className="font-mono text-sm"
             />
-          </div>
+          </Field>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label>Extra query <span className="font-normal text-muted-foreground">(optional)</span></Label>
+      <Field
+        label={
+          <>
+            Extra query <span className="font-normal text-muted-foreground">(optional)</span>
+          </>
+        }
+      >
         <Input
           value={extra}
           onChange={(e) => setExtra(e.target.value)}
@@ -186,7 +181,7 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
         <p className="text-xs text-muted-foreground">
           Appended to the request as-is — paging, _since, _count, …
         </p>
-      </div>
+      </Field>
 
       <RequestPreviewBar
         method="GET"
@@ -196,20 +191,6 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
           {loading ? "Loading…" : "Run"}
         </Button>
       </RequestPreviewBar>
-    </div>
+    </BasePanel>
   );
-
-  const response = (
-    <div className="space-y-3">
-      {canEdit && (
-        <Button size="sm" variant="secondary" onClick={editCurrent}>
-          <Pencil className="mr-1 h-4 w-4" />
-          Edit this resource
-        </Button>
-      )}
-      <ResponseView res={res} />
-    </div>
-  );
-
-  return <PanelSplit form={form} response={response} />;
 }

@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
-import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-client";
-import { PanelSplit } from "./PanelSplit";
-import { useExplorerBus } from "@/lib/explorer-bus";
+import { useState } from "react";
+import { encodeFhirPathSegment } from "@/lib/fhir-client";
+import { useExplorerBus, useConsumePrefill } from "@/lib/explorer-bus";
+import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ResponseView } from "./ResponseView";
 import { JsonEditor } from "./JsonEditor";
 import { ResourceCombobox } from "./ResourceCombobox";
 import { ChoiceCards } from "./ChoiceCards";
 import { RequestPreviewBar } from "./RequestPreviewBar";
+import { BasePanel } from "./BasePanel";
+import { Field } from "./Field";
 
 type Op = "create" | "update" | "patch" | "delete" | "validate";
 
@@ -42,26 +42,19 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
   const [id, setId] = useState("");
   const [ifMatch, setIfMatch] = useState("");
   const [body, setBody] = useState(SAMPLES.Patient);
-  const [res, setRes] = useState<FhirResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { res, loading, run: send } = useFhirRequest(baseUrl);
   const bus = useExplorerBus();
 
   // "Edit this resource" from the Read tab lands here fully prefilled.
-  useEffect(() => {
-    if (bus?.tab !== "write") return;
-    const p = bus?.consumeWritePrefill();
-    if (p) {
-      setOp(p.op);
-      setType(p.type);
-      setId(p.id);
-      setBody(p.body);
-      setIfMatch(p.ifMatch ?? "");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bus?.tab, bus?.writePrefill]);
+  useConsumePrefill(bus, "write", bus?.writePrefill, bus?.consumeWritePrefill, (p) => {
+    setOp(p.op);
+    setType(p.type);
+    setId(p.id);
+    setBody(p.body);
+    setIfMatch(p.ifMatch ?? "");
+  });
 
-  async function run() {
-    setLoading(true);
+  function run() {
     let path = "";
     let method = "POST";
     const headers: Record<string, string> = {};
@@ -95,16 +88,7 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
         break;
     }
 
-    try {
-      setRes(await fhirFetch(path, { method, headers, body: sendBody }, baseUrl));
-    } catch (e: any) {
-      setRes({
-        status: 0, ok: false, headers: {}, body: { error: e?.message }, raw: "",
-        url: "", method, durationMs: 0,
-      });
-    } finally {
-      setLoading(false);
-    }
+    void send(path, { method, headers, body: sendBody });
   }
 
   const ops: { value: Op; label: string; desc: string }[] = [
@@ -133,16 +117,14 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
         ? `/${type}/$validate`
         : `/${type}/${id || "{id}"}`;
 
-  const form = (
-    <div className="space-y-5">
-      <div className="space-y-1.5">
-        <Label>Interaction</Label>
+  return (
+    <BasePanel res={res}>
+      <Field label="Interaction">
         <ChoiceCards choices={ops} value={op} onChange={setOp} />
-      </div>
+      </Field>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="write-type">Resource Type</Label>
+        <Field label="Resource Type" htmlFor="write-type">
           <ResourceCombobox
             id="write-type"
             value={type}
@@ -152,23 +134,25 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
             }}
             baseUrl={baseUrl}
           />
-        </div>
+        </Field>
         {usesId && (
-          <div className="space-y-1.5">
-            <Label>ID</Label>
+          <Field label="ID">
             <Input
               value={id}
               onChange={(e) => setId(e.target.value)}
               placeholder="resource id"
               className="font-mono text-sm"
             />
-          </div>
+          </Field>
         )}
         {usesIfMatch && (
-          <div className="space-y-1.5">
-            <Label>
-              If-Match <span className="font-normal text-muted-foreground">(optional)</span>
-            </Label>
+          <Field
+            label={
+              <>
+                If-Match <span className="font-normal text-muted-foreground">(optional)</span>
+              </>
+            }
+          >
             <Input
               value={ifMatch}
               onChange={(e) => setIfMatch(e.target.value)}
@@ -178,15 +162,14 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
             <p className="text-xs text-muted-foreground">
               Version ETag — server rejects the update with 412 if the resource changed.
             </p>
-          </div>
+          </Field>
         )}
       </div>
 
       {usesBody && (
-        <div className="space-y-1.5">
-          <Label>Body ({op === "patch" ? "JSON Merge Patch" : "FHIR JSON"})</Label>
+        <Field label={`Body (${op === "patch" ? "JSON Merge Patch" : "FHIR JSON"})`}>
           <JsonEditor value={body} onChange={setBody} rows={14} ariaLabel="Request body" />
-        </div>
+        </Field>
       )}
 
       <RequestPreviewBar method={methodFor[op]} path={previewPath}>
@@ -194,8 +177,6 @@ export function WritePanel({ baseUrl }: { baseUrl: string }) {
           {loading ? "Sending…" : "Send"}
         </Button>
       </RequestPreviewBar>
-    </div>
+    </BasePanel>
   );
-
-  return <PanelSplit form={form} response={<ResponseView res={res} />} />;
 }

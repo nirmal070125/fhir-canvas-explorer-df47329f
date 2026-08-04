@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { fhirFetch, encodeFhirPathSegment, type FhirResponse } from "@/lib/fhir-client";
+import { encodeFhirPathSegment } from "@/lib/fhir-client";
+import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { JsonEditor } from "./JsonEditor";
-import { ResponseView } from "./ResponseView";
-import { PanelSplit } from "./PanelSplit";
+import { BasePanel } from "./BasePanel";
 import { ResourceCombobox } from "./ResourceCombobox";
 import { OperationCombobox } from "./OperationCombobox";
 import { OperationParamCombobox } from "./OperationParamCombobox";
 import { ChoiceCards } from "./ChoiceCards";
 import { RequestPreviewBar } from "./RequestPreviewBar";
-import { Plus, Trash2, Play } from "lucide-react";
+import { Field } from "./Field";
+import { RowSection, RemoveRowButton } from "./RowSection";
+import { Play } from "lucide-react";
 import { useOperations } from "@/hooks/use-operations";
 import {
   buildOperationQuery,
@@ -38,8 +40,7 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
   const [methodOverride, setMethodOverride] = useState<"GET" | "POST" | null>(null);
   const [editBody, setEditBody] = useState(false);
   const [rawBody, setRawBody] = useState("");
-  const [res, setRes] = useState<FhirResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { res, loading, run: send } = useFhirRequest(baseUrl);
 
   const { byName } = useOperations(scope, resourceType, baseUrl);
   const op = byName.get(opName);
@@ -102,68 +103,43 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
     setParams((p) => p.filter((_, idx) => idx !== i));
   }
 
-  async function run() {
-    setLoading(true);
-    try {
-      const init =
-        method === "POST"
-          ? {
-              method: "POST",
-              headers: { "Content-Type": "application/fhir+json" },
-              body,
-            }
-          : {};
-      setRes(await fhirFetch(requestPath, init, baseUrl));
-    } catch (e: unknown) {
-      setRes({
-        status: 0,
-        ok: false,
-        headers: {},
-        body: { error: e instanceof Error ? e.message : "Network error" },
-        raw: "",
-        url: "",
-        method,
-        durationMs: 0,
-      });
-    } finally {
-      setLoading(false);
-    }
+  function run() {
+    const init =
+      method === "POST"
+        ? { method: "POST", headers: { "Content-Type": "application/fhir+json" }, body }
+        : {};
+    void send(requestPath, init);
   }
 
   const form = (
-    <div className="space-y-5">
-      {/* Scope */}
-      <div className="space-y-1.5">
-        <Label>Scope</Label>
+    <>
+      <Field label="Scope">
         <ChoiceCards choices={SCOPES} value={scope} onChange={setScope} gridClass="grid grid-cols-3 gap-2" />
-      </div>
+      </Field>
 
       {/* Target: resource type / id (for type & instance scope) + operation */}
       <div className="grid gap-3 sm:grid-cols-2">
         {scope !== "system" && (
-          <div className="space-y-1.5">
-            <Label htmlFor="op-type">Resource Type</Label>
+          <Field label="Resource Type" htmlFor="op-type">
             <ResourceCombobox
               id="op-type"
               value={resourceType}
               onChange={setResourceType}
               baseUrl={baseUrl}
             />
-          </div>
+          </Field>
         )}
         {scope === "instance" && (
-          <div className="space-y-1.5">
-            <Label>ID</Label>
+          <Field label="ID">
             <Input
               value={id}
               onChange={(e) => setId(e.target.value)}
               placeholder="resource id"
               className="font-mono text-sm"
             />
-          </div>
+          </Field>
         )}
-        <div className="space-y-1.5">
-          <Label>Operation</Label>
+        <Field label="Operation">
           <OperationCombobox
             scope={scope}
             resourceType={resourceType}
@@ -171,14 +147,12 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
             value={opName}
             onChange={setOpName}
           />
-        </div>
+        </Field>
       </div>
 
       {op?.documentation && <p className="text-xs text-muted-foreground">{op.documentation}</p>}
 
-      {/* Invocation method */}
-      <div className="space-y-1.5">
-        <Label>Invoke as</Label>
+      <Field label="Invoke as">
         <div className="flex h-9 w-fit items-center gap-3 rounded-md border bg-card px-3 text-sm">
           <label className="flex items-center gap-1">
             <input
@@ -204,16 +178,10 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
             This operation needs POST (changes state or has a complex parameter).
           </span>
         )}
-      </div>
+      </Field>
 
       {/* Parameters — same combobox-row UX as the Search panel */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Parameters</Label>
-          <Button variant="outline" size="sm" onClick={add}>
-            <Plus className="mr-1 h-4 w-4" /> Add parameter
-          </Button>
-        </div>
+      <RowSection label="Parameters" addLabel="Add parameter" onAdd={add}>
         {params.map((p, i) => {
           const def = byParamName.get(p.k);
           return (
@@ -233,18 +201,11 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
                 onKeyDown={(e) => e.key === "Enter" && canRun && run()}
                 className="flex-1 font-mono text-sm"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(i)}
-                aria-label="Remove parameter"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <RemoveRowButton onClick={() => remove(i)} ariaLabel="Remove parameter" />
             </div>
           );
         })}
-      </div>
+      </RowSection>
 
       {/* Request preview + invoke */}
       <div className="rounded-md border bg-muted/30">
@@ -281,8 +242,8 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
             </pre>
           ))}
       </div>
-    </div>
+    </>
   );
 
-  return <PanelSplit form={form} response={<ResponseView res={res} />} />;
+  return <BasePanel res={res}>{form}</BasePanel>;
 }

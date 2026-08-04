@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 /** Cross-tab coordination: one panel opens another tab with fields prefilled; each prefill is consumed exactly once by the target panel. */
 
@@ -84,4 +84,20 @@ export function ExplorerBusProvider({
 
 export function useExplorerBus(): ExplorerBus | null {
   return useContext(Ctx);
+}
+
+/** Applies a prefill once when its tab becomes active — the consume/apply pattern every target panel repeats. */
+export function useConsumePrefill<T>(
+  bus: ExplorerBus | null,
+  tab: string,
+  prefill: T | null | undefined,
+  consume: (() => T | null) | undefined,
+  apply: (p: T) => void,
+) {
+  useEffect(() => {
+    if (bus?.tab !== tab) return;
+    const p = consume?.();
+    if (p) apply(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bus?.tab, prefill]);
 }
