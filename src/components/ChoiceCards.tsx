@@ -1,10 +1,19 @@
+import {
+  Choicebox,
+  ChoiceboxItem,
+  ChoiceboxItemHeader,
+  ChoiceboxItemTitle,
+  ChoiceboxItemDescription,
+  ChoiceboxIndicator,
+} from "@/components/kibo-ui/choicebox";
+
 export interface Choice<T extends string> {
   value: T;
   label: string;
   desc: string;
 }
 
-/** Shared grid of selectable label+description cards used by the panel interaction/scope pickers. */
+/** Grid of selectable label+description cards for the panel interaction/scope pickers, backed by Kibo's Choicebox (Radix RadioGroup semantics). */
 export function ChoiceCards<T extends string>({
   choices,
   value,
@@ -17,26 +26,18 @@ export function ChoiceCards<T extends string>({
   gridClass?: string;
 }) {
   return (
-    <div className={gridClass}>
+    <Choicebox value={value} onValueChange={(v) => onChange(v as T)} className={gridClass}>
       {choices.map((c) => (
-        <button
-          key={c.value}
-          type="button"
-          onClick={() => onChange(c.value)}
-          aria-pressed={value === c.value}
-          className={
-            "rounded-md border px-3 py-2 text-left transition-colors " +
-            (value === c.value
-              ? "border-primary bg-primary/5 ring-1 ring-primary"
-              : "bg-card hover:bg-muted/50")
-          }
-        >
-          <span className="block text-sm font-medium">{c.label}</span>
-          <span className="mt-0.5 block min-h-8 text-[11px] leading-snug text-muted-foreground">
-            {c.desc}
-          </span>
-        </button>
+        <ChoiceboxItem key={c.value} value={c.value} className="px-3 py-2">
+          <ChoiceboxItemHeader>
+            <ChoiceboxItemTitle>{c.label}</ChoiceboxItemTitle>
+            <ChoiceboxItemDescription className="min-h-8 text-[11px] leading-snug">
+              {c.desc}
+            </ChoiceboxItemDescription>
+          </ChoiceboxItemHeader>
+          <ChoiceboxIndicator />
+        </ChoiceboxItem>
       ))}
-    </div>
+    </Choicebox>
   );
 }
