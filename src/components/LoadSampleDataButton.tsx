@@ -25,6 +25,8 @@ function loadedStorageKey(baseUrl: string) {
 }
 
 function wasSampleDataLoaded(baseUrl: string) {
+  // Guard for SSR: this component renders on the server first, where localStorage doesn't exist.
+  if (typeof localStorage === "undefined") return false;
   return localStorage.getItem(loadedStorageKey(baseUrl)) === "true";
 }
 
