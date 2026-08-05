@@ -67,15 +67,18 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge className={statusColor}>
+      <div className="flex items-center gap-2 text-sm">
+        <Badge className={`shrink-0 ${statusColor}`}>
           {res.method} {res.status}
         </Badge>
-        <span className="text-muted-foreground">{res.durationMs}ms</span>
-        <code className="max-w-full truncate rounded bg-muted px-2 py-0.5 font-mono text-xs">
+        <span className="shrink-0 text-muted-foreground">{res.durationMs}ms</span>
+        <code
+          className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-0.5 font-mono text-xs"
+          title={res.url}
+        >
           {res.url}
         </code>
-        <div className="ml-auto flex gap-1">
+        <div className="flex shrink-0 gap-1">
           <Button
             size="sm"
             variant="outline"
