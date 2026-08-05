@@ -32,7 +32,9 @@ function wasSampleDataLoaded(baseUrl: string) {
 
 export function LoadSampleDataButton({ baseUrl }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
-  const [loaded, setLoaded] = useState(() => wasSampleDataLoaded(baseUrl));
+  // Start false and read localStorage after mount — reading it in the initializer
+  // makes the first client render differ from the server HTML (hydration mismatch).
+  const [loaded, setLoaded] = useState(false);
   // Read the patient count from the manifest so the label never goes stale when the dataset is resized.
   const [patientCount, setPatientCount] = useState<number | null>(null);
 
