@@ -82,45 +82,32 @@ export function LoadSampleDataButton({ baseUrl }: Props) {
       : `Seeds synthetic patient data (Synthea) into ${baseUrl}`;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2">
       <Button
         onClick={run}
         disabled={disabled}
         variant="outline"
-        title={loaded ? "Sample data has already been loaded" : idleTitle}
+        title={loaded ? "Sample data has already been loaded into this server" : idleTitle}
       >
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+        {busy ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : loaded ? (
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+        ) : (
+          <Database className="h-4 w-4" />
+        )}
         {loaded ? "Sample data loaded" : "Load sample data"}
       </Button>
-      <StatusLine state={state} patientCount={patientCount} loaded={loaded} />
+      <StatusLine state={state} loaded={loaded} />
     </div>
   );
 }
 
-function StatusLine({
-  state,
-  patientCount,
-  loaded,
-}: {
-  state: State;
-  patientCount: number | null;
-  loaded: boolean;
-}) {
-  if (state.kind === "idle") {
-    if (loaded) {
-      return (
-        <span className="text-xs text-muted-foreground">Sample data has already been loaded.</span>
-      );
-    }
-    return (
-      <span className="text-xs text-muted-foreground">
-        {patientCount != null
-          ? `Seeds ${patientCount} synthetic patients (Synthea) into the server above.`
-          : "Seeds synthetic patient data (Synthea) into the server above."}
-      </span>
-    );
-  }
-
+/**
+ * Inline status next to the button. The button itself communicates idle and
+ * fully-loaded states, so this only renders while loading or after a problem.
+ */
+function StatusLine({ state, loaded }: { state: State; loaded: boolean }) {
   if (state.kind === "loading") {
     const { index, total, file, status } = state.progress;
     if (total === 0) {
@@ -134,27 +121,24 @@ function StatusLine({
     );
   }
 
-  if (state.kind === "done") {
-    const { ok, failed, resources, durationMs } = state.summary;
-    const Icon = failed > 0 ? AlertCircle : CheckCircle2;
-    const color = failed > 0 ? "text-destructive" : "text-primary";
+  if (state.kind === "done" && !loaded) {
+    const { ok, failed } = state.summary;
     return (
-      <span className={`flex items-center gap-1 text-xs ${color}`}>
-        <Icon className="h-4 w-4" />
-        Loaded {ok}/{ok + failed} bundles · {resources} resources · {durationMs}ms
-        {failed > 0 && (
-          <span className="ml-2 text-muted-foreground">
-            ({state.summary.errors[0].message.slice(0, 80)}…)
-          </span>
-        )}
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <AlertCircle className="h-4 w-4" />
+        {ok}/{ok + failed} bundles loaded — {state.summary.errors[0]?.message.slice(0, 80)}
       </span>
     );
   }
 
-  return (
-    <span className="flex items-center gap-1 text-xs text-destructive">
-      <AlertCircle className="h-4 w-4" />
-      {state.message}
-    </span>
-  );
+  if (state.kind === "error") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <AlertCircle className="h-4 w-4" />
+        {state.message}
+      </span>
+    );
+  }
+
+  return null;
 }

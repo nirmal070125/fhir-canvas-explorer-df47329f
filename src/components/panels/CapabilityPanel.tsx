@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResponseView } from "../ResponseView";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Pagination,
   PaginationContent,
@@ -61,8 +62,8 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <Tabs defaultValue="overview" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">
           {cs?.fhirVersion && (
             <>
@@ -71,11 +72,22 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
             </>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={() => refetch()} disabled={loading}>
-          {loading ? "Loading…" : "Reload"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <TabsList className="h-8">
+            <TabsTrigger value="overview" className="text-xs">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="raw" className="text-xs">
+              Raw JSON
+            </TabsTrigger>
+          </TabsList>
+          <Button size="sm" variant="outline" onClick={() => refetch()} disabled={loading}>
+            {loading ? "Loading…" : "Reload"}
+          </Button>
+        </div>
       </div>
 
+      <TabsContent value="overview" className="m-0 space-y-4">
       {resources.length > 0 && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -173,8 +185,16 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
           )}
         </div>
       )}
+      {resources.length === 0 && (
+        <div className="rounded-md border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+          {loading ? "Loading capability statement…" : "No capability data available."}
+        </div>
+      )}
+      </TabsContent>
 
-      <ResponseView res={res ?? null} />
-    </div>
+      <TabsContent value="raw" className="m-0">
+        <ResponseView res={res ?? null} />
+      </TabsContent>
+    </Tabs>
   );
 }

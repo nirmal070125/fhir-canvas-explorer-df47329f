@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { FhirResponse } from "@/lib/fhir-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,40 +13,8 @@ import {
   type OperationOutcomeIssue,
 } from "@/lib/fhir-response";
 
-type WireFormat = "json" | "xml" | "ttl";
-
-const FORMAT_ACCEPT: Record<WireFormat, string> = {
-  json: "application/fhir+json",
-  xml: "application/fhir+xml",
-  ttl: "application/x-turtle",
-};
-
 export function ResponseView({ res }: { res: FhirResponse | null }) {
   const [copied, setCopied] = useState(false);
-  const [format, setFormat] = useState<WireFormat>("json");
-  const [alt, setAlt] = useState<{ format: WireFormat; text: string } | null>(null);
-  const [altLoading, setAltLoading] = useState(false);
-
-  // A new response always starts back at JSON.
-  useEffect(() => {
-    setFormat("json");
-    setAlt(null);
-  }, [res]);
-
-  // XML/Turtle refetch the same URL with a different Accept header; GET-only since replaying a write would repeat its side effect.
-  async function switchFormat(f: WireFormat) {
-    setFormat(f);
-    if (f === "json" || !res || alt?.format === f) return;
-    setAltLoading(true);
-    try {
-      const r = await fetch(res.url, { headers: { Accept: FORMAT_ACCEPT[f] } });
-      setAlt({ format: f, text: await r.text() });
-    } catch (e: any) {
-      setAlt({ format: f, text: `// failed to fetch ${f}: ${e?.message ?? "error"}` });
-    } finally {
-      setAltLoading(false);
-    }
-  }
 
   const pretty = useMemo(() => {
     if (!res) return "";
@@ -135,31 +103,10 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
 
       {Object.keys(res.headers).length > 0 && <HeadersView headers={res.headers} />}
 
-      {res.method === "GET" && res.url && res.status > 0 && (
-        <div className="flex items-center gap-1">
-          {(["json", "xml", "ttl"] as const).map((f) => (
-            <Button
-              key={f}
-              size="sm"
-              variant={format === f ? "default" : "outline"}
-              className="h-7 px-2 text-xs uppercase"
-              onClick={() => switchFormat(f)}
-            >
-              {f === "ttl" ? "Turtle" : f}
-            </Button>
-          ))}
-          {altLoading && <span className="text-xs text-muted-foreground">loading…</span>}
-        </div>
-      )}
-
-      {format === "json" || !alt ? (
-        typeof res.body === "object" && res.body !== null ? (
-          <JsonView value={res.body} />
-        ) : (
-          <CodeBlock code={pretty} language="json" />
-        )
+      {typeof res.body === "object" && res.body !== null ? (
+        <JsonView value={res.body} />
       ) : (
-        <CodeBlock code={alt.text} language={alt.format === "xml" ? "xml" : "turtle"} />
+        <CodeBlock code={pretty} language="json" />
       )}
     </div>
   );
@@ -209,8 +156,8 @@ function HeadersView({ headers }: { headers: Record<string, string> }) {
       </summary>
       <div className="divide-y border-t">
         {entries.map(([k, v]) => (
-          <div key={k} className="grid grid-cols-[minmax(110px,auto)_1fr] gap-x-4 px-3 py-1.5">
-            <span className="truncate font-mono text-xs font-medium text-sky-700 dark:text-sky-300">
+          <div key={k} className="grid grid-cols-[200px_1fr] items-baseline gap-x-4 px-3 py-1.5">
+            <span className="break-all font-mono text-xs font-medium text-sky-700 dark:text-sky-300">
               {k}
             </span>
             <span className="break-all font-mono text-xs text-foreground/90">{v}</span>
