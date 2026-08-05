@@ -77,7 +77,10 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   }
 
   const bundle = res?.body as any;
-  const links: Array<{ relation: string; url: string }> = bundle?.link ?? [];
+  // Only the links that actually navigate; self/first/last are noise for paging.
+  const links: Array<{ relation: string; url: string }> = (bundle?.link ?? []).filter(
+    (l: { relation: string }) => l.relation === "next" || l.relation === "previous",
+  );
 
   const form = (
     <>
