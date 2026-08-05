@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 import { ChatComposer, PoweredBy, SuggestionButtons } from "./ChatComposer";
-import { describeTool } from "./chat-state";
+import { describeTool, isToolPart } from "./chat-state";
 import {
   Conversation,
   ConversationContent,
@@ -83,7 +83,7 @@ function ChatMessagePart({ messageId, part, index }: ChatMessagePartProps) {
     );
   }
 
-  if (!part.type.startsWith("tool-")) return null;
+  if (!isToolPart(part)) return null;
   const state = "state" in part ? part.state : undefined;
   if (state !== "output-available") return null;
 

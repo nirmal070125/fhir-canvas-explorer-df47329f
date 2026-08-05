@@ -13,6 +13,11 @@ interface FhirToolPart {
   input?: FhirToolInput;
 }
 
+/** MCP-provided tools stream as "dynamic-tool" parts; statically-typed tools as "tool-<name>". */
+export function isToolPart(part: { type: string }): boolean {
+  return part.type === "dynamic-tool" || part.type.startsWith("tool-");
+}
+
 export function followUpSuggestions(messages: FhirChatMessage[]): string[] {
   let lastAssistant: FhirChatMessage | undefined;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -23,7 +28,7 @@ export function followUpSuggestions(messages: FhirChatMessage[]): string[] {
 
   const resourceTypes = new Set<string>();
   for (const part of lastAssistant?.parts ?? []) {
-    if (!part.type.startsWith("tool-")) continue;
+    if (!isToolPart(part)) continue;
     const input = (part as FhirToolPart).input;
     const resourceType = input?.type ?? input?.resourceType;
     if (resourceType) resourceTypes.add(resourceType);
@@ -74,7 +79,7 @@ export function currentActivity(
     const part = lastMessage.parts[index];
     if (!part) continue;
     if (part.type === "text" && part.text.trim()) return "Writing response";
-    if (!part.type.startsWith("tool-")) continue;
+    if (!isToolPart(part)) continue;
 
     const state = "state" in part ? part.state : undefined;
     return state === "output-available" ? "Reviewing FHIR results" : describeTool(part);
