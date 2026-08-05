@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fhirFetch } from "@/lib/fhir-client";
+import { parseCapabilityStatement, type CapabilityResource } from "@/lib/capability";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResponseView } from "../ResponseView";
@@ -32,10 +33,10 @@ function pageNumbers(current: number, total: number): Array<number | "…"> {
 }
 
 /** Case-insensitive match of resource rows against the type filter text. */
-function filterByType(resources: any[], filter: string): any[] {
+function filterByType(resources: CapabilityResource[], filter: string): CapabilityResource[] {
   const q = filter.trim().toLowerCase();
   if (!q) return resources;
-  return resources.filter((r) => String(r.type ?? "").toLowerCase().includes(q));
+  return resources.filter((r) => r.type.toLowerCase().includes(q));
 }
 
 export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
@@ -45,6 +46,7 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
   const {
     data: res,
     isFetching: loading,
+    error,
     refetch,
   } = useQuery({
     queryKey: ["metadata-response", baseUrl],
@@ -52,8 +54,8 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
     enabled: !!baseUrl,
   });
 
-  const cs = res?.body as any;
-  const resources: any[] = cs?.rest?.[0]?.resource ?? [];
+  const summary = useMemo(() => parseCapabilityStatement(res?.body), [res]);
+  const resources = summary.resources;
 
   const filtered = useMemo(() => filterByType(resources, filter), [resources, filter]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -64,10 +66,10 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {cs?.fhirVersion && (
+          {summary.fhirVersion && (
             <>
-              FHIR <Badge variant="secondary">{cs.fhirVersion}</Badge> ·{" "}
-              {cs.software?.name} {cs.software?.version}
+              FHIR <Badge variant="secondary">{summary.fhirVersion}</Badge> ·{" "}
+              {summary.softwareName} {summary.softwareVersion}
             </>
           )}
         </div>
@@ -75,6 +77,13 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
           {loading ? "Loading…" : "Reload"}
         </Button>
       </div>
+
+      {error != null && (
+        <p className="text-sm text-destructive">
+          Failed to load capability statement:{" "}
+          {error instanceof Error ? error.message : String(error)}
+        </p>
+      )}
 
       {resources.length > 0 && (
         <div className="space-y-3">
@@ -108,17 +117,15 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
                   <td className="px-3 py-2 font-mono text-xs">{r.type}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1">
-                      {(r.interaction ?? []).map((i: any) => (
-                        <Badge key={i.code} variant="outline" className="text-[10px]">
-                          {i.code}
+                      {r.interactions.map((code) => (
+                        <Badge key={code} variant="outline" className="text-[10px]">
+                          {code}
                         </Badge>
                       ))}
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <span className="text-xs text-muted-foreground">
-                      {(r.searchParam ?? []).length}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{r.searchParamCount}</span>
                   </td>
                 </tr>
               ))}
