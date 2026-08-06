@@ -5,6 +5,9 @@ import { cleanup } from "@testing-library/react";
 
 afterEach(() => {
   cleanup();
+  // The polyfill store below (and jsdom's own storage) is module-level, so
+  // clear it here to keep state from leaking across tests and files.
+  localStorage.clear();
 });
 
 // jsdom lacks several APIs that Radix UI / cmdk rely on (pointer capture,
@@ -39,7 +42,7 @@ if (typeof globalThis.localStorage === "undefined" || globalThis.localStorage ==
   Object.defineProperty(globalThis, "localStorage", { value: storage, writable: true });
 }
 if (typeof window !== "undefined" && !window.matchMedia) {
-  // @textea/json-viewer probes prefers-color-scheme on mount.
+  // react18-json-view probes prefers-color-scheme on mount.
   window.matchMedia = (query: string) =>
     ({
       matches: false,
