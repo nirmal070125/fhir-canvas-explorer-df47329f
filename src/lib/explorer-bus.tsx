@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 /** Cross-tab coordination: one panel opens another tab with fields prefilled; each prefill is consumed exactly once by the target panel. */
 
@@ -44,7 +44,9 @@ export function ExplorerBusProvider({
   const [rawPrefill, setRawPrefill] = useState<RawPrefill | null>(null);
   const [readPrefill, setReadPrefill] = useState<{ type: string; id: string } | null>(null);
 
-  const bus: ExplorerBus = {
+  // Memoized so the context value keeps its identity between renders —
+  // otherwise every consumer re-renders whenever the provider does.
+  const bus: ExplorerBus = useMemo(() => ({
     tab,
     setTab,
     writePrefill,
@@ -77,7 +79,7 @@ export function ExplorerBusProvider({
       if (p) setReadPrefill(null);
       return p;
     },
-  };
+  }), [tab, setTab, writePrefill, rawPrefill, readPrefill]);
 
   return <Ctx.Provider value={bus}>{children}</Ctx.Provider>;
 }
