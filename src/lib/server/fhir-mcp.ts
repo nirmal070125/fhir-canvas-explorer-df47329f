@@ -45,7 +45,9 @@ async function createCachedClient(baseUrl: string): Promise<CachedMcpClient> {
     args,
     env: {
       FHIR_SERVER_BASE_URL: baseUrl,
-      FHIR_SERVER_DISABLE_AUTHORIZATION: "True",
+      // Defaults to disabled for the open local dev server; set the env var to
+      // "False" (plus the fhir-mcp-server auth env vars) for a secured server.
+      FHIR_SERVER_DISABLE_AUTHORIZATION: process.env.FHIR_SERVER_DISABLE_AUTHORIZATION ?? "True",
       FHIR_MCP_REQUEST_TIMEOUT: process.env.FHIR_MCP_REQUEST_TIMEOUT ?? "30",
     },
   });
