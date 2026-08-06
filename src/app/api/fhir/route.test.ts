@@ -77,6 +77,41 @@ describe("FHIR proxy", () => {
     expect(upstreamFetch).not.toHaveBeenCalled();
   });
 
+  it("rejects loopback and link-local targets", async () => {
+    const upstreamFetch = vi.fn();
+    vi.stubGlobal("fetch", upstreamFetch);
+
+    for (const url of [
+      "http://127.0.0.1:9999/admin",
+      "http://169.254.169.254/latest/meta-data/",
+      "http://[::1]/admin",
+      "http://10.0.0.5/internal",
+      "http://[::ffff:127.0.0.1]/admin",
+    ]) {
+      const response = await GET(
+        new Request(`http://localhost/api/fhir?url=${encodeURIComponent(url)}`),
+      );
+      expect(response.status, url).toBe(400);
+    }
+    expect(upstreamFetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects hostnames that resolve to private addresses", async () => {
+    const upstreamFetch = vi.fn();
+    vi.stubGlobal("fetch", upstreamFetch);
+    const dns = await import("node:dns/promises");
+    vi.mocked(dns.lookup).mockResolvedValueOnce([
+      { address: "192.168.1.10", family: 4 },
+    ] as never);
+
+    const response = await GET(
+      new Request(`http://localhost/api/fhir?url=${encodeURIComponent("http://rebind.example/x")}`),
+    );
+
+    expect(response.status).toBe(400);
+    expect(upstreamFetch).not.toHaveBeenCalled();
+  });
+
   it("preserves the complete upstream URL", async () => {
     const upstreamFetch = vi.fn(async (..._args: Parameters<typeof fetch>) => new Response(null));
     vi.stubGlobal("fetch", upstreamFetch);
