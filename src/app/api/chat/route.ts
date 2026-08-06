@@ -3,9 +3,15 @@ import { createAgentUIStreamResponse, stepCountIs, ToolLoopAgent, type UIMessage
 import type { FhirChatMessageMetadata } from "@/lib/fhir-chat-types";
 import { acquireReadOnlyFhirMcpClient } from "@/lib/server/fhir-mcp";
 import { resolveFhirTarget } from "@/lib/server/fhir-target";
+import { clientKey, isRateLimited } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+// Each request can spend up to 6 LLM tool-loop steps of the operator's
+// OPENAI_API_KEY, so cap requests per client IP.
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60_000;
 
 interface FhirChatRequestBody {
   messages?: UIMessage[];
@@ -13,6 +19,13 @@ interface FhirChatRequestBody {
 }
 
 export async function POST(request: Request) {
+  if (isRateLimited(clientKey(request), RATE_LIMIT, RATE_WINDOW_MS)) {
+    return Response.json(
+      { error: "Too many requests. Try again in a minute." },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return Response.json(
       { error: "The chatbot is not configured. Set OPENAI_API_KEY on the server." },
