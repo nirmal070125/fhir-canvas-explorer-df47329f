@@ -67,7 +67,11 @@ export function LoadSampleDataButton({ baseUrl }: Props) {
       );
       setState({ kind: "done", summary });
       if (summary.failed === 0) {
-        localStorage.setItem(loadedStorageKey(baseUrl), "true");
+        try {
+          localStorage.setItem(loadedStorageKey(baseUrl), "true");
+        } catch {
+          /* best-effort persistence — storage full or disabled */
+        }
         setLoaded(true);
       }
     } catch (e: unknown) {
