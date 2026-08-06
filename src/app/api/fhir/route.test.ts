@@ -1,4 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// The SSRF guard DNS-resolves non-allowlisted hostnames; resolve the test host to a public address.
+vi.mock("node:dns/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:dns/promises")>();
+  const lookup = vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]);
+  return { ...actual, default: { ...actual, lookup }, lookup };
+});
+
 import { GET, POST } from "./route";
 
 const TARGET_URL = "https://fhir.example.org/r4/Patient";
