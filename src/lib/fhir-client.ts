@@ -38,7 +38,11 @@ export function setBaseUrl(url: string): boolean {
   if (typeof window === "undefined") return false;
   const cleaned = url.trim().replace(/\/$/, "");
   if (!isValidBaseUrl(cleaned)) return false;
-  localStorage.setItem(STORAGE_KEY, cleaned);
+  try {
+    localStorage.setItem(STORAGE_KEY, cleaned);
+  } catch {
+    return false; // storage full or disabled — nothing was persisted
+  }
   return true;
 }
 
