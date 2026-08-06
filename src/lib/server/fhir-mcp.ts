@@ -4,12 +4,16 @@ import type { ToolSet } from "ai";
 
 const READ_ONLY_TOOL_NAMES = ["get_capabilities", "search", "read"] as const;
 const DEFAULT_IDLE_TTL_MS = 5 * 60 * 1000;
+// Each distinct base URL spawns an MCP subprocess; cap them so attacker-varied
+// URLs can't exhaust process/memory limits.
+const MAX_CLIENTS = 8;
 
 interface CachedMcpClient {
   client: MCPClient;
   tools: ToolSet;
   activeRequests: number;
   idleTimer?: NodeJS.Timeout;
+  lastUsedAt: number;
 }
 
 const globalMcpCache = globalThis as typeof globalThis & {
@@ -60,11 +64,32 @@ async function createCachedClient(baseUrl: string): Promise<CachedMcpClient> {
       tools[name] = tool;
     }
 
-    return { client, tools, activeRequests: 0 };
+    return { client, tools, activeRequests: 0, lastUsedAt: Date.now() };
   } catch (error) {
     await client.close();
     throw error;
   }
+}
+
+/** Evicts the least-recently-used idle client to make room for a new one. */
+async function evictIdleClient(): Promise<boolean> {
+  let lruKey: string | undefined;
+  let lru: CachedMcpClient | undefined;
+
+  for (const [key, pending] of clients) {
+    const cached = await pending.catch(() => null);
+    if (!cached || cached.activeRequests > 0 || clients.get(key) !== pending) continue;
+    if (!lru || cached.lastUsedAt < lru.lastUsedAt) {
+      lruKey = key;
+      lru = cached;
+    }
+  }
+
+  if (!lruKey || !lru) return false;
+  clients.delete(lruKey);
+  if (lru.idleTimer) clearTimeout(lru.idleTimer);
+  void lru.client.close();
+  return true;
 }
 
 export async function acquireReadOnlyFhirMcpClient(baseUrl: string): Promise<{
@@ -74,12 +99,16 @@ export async function acquireReadOnlyFhirMcpClient(baseUrl: string): Promise<{
 }> {
   let pendingClient = clients.get(baseUrl);
   if (!pendingClient) {
+    if (clients.size >= MAX_CLIENTS && !(await evictIdleClient())) {
+      throw new Error("Too many FHIR servers in use right now. Try again shortly.");
+    }
     pendingClient = createCachedClient(baseUrl);
     clients.set(baseUrl, pendingClient);
     pendingClient.catch(() => clients.delete(baseUrl));
   }
 
   const cached = await pendingClient;
+  cached.lastUsedAt = Date.now();
   if (cached.idleTimer) {
     clearTimeout(cached.idleTimer);
     cached.idleTimer = undefined;
