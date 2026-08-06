@@ -1,0 +1,24 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: explorer-web
+  namespace: default
+spec:
+  owner:
+    projectName: fhir-canvas-explorer
+    componentName: explorer-web
+  containers:
+    main:
+      image: fhir-canvas-explorer:latest # TODO: replace with the registry image the build emits
+      env:
+        - key: FHIR_ALLOWED_ORIGINS
+          # TODO: point at the in-cluster FHIR server component once it exists.
+          value: http://fhir-server:9090
+        - key: FHIR_MCP_IDLE_TTL_MS
+          value: "300000"
+        # TODO: OPENAI_API_KEY must come from a secret reference, never a value.
+  endpoints:
+    http:
+      type: HTTP
+      port: 8080
+      # TODO: visibility + gateway/TLS config after the endpoint model is decided.
