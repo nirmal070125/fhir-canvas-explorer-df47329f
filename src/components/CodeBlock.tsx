@@ -6,16 +6,7 @@ import "prismjs/components/prism-json";
 // Read-only Prism code block; payloads above this size render as plain text since highlighting them locks the main thread.
 const MAX_HIGHLIGHT_CHARS = 1_500_000;
 
-export type CodeLanguage = "json";
-
-export function CodeBlock({
-  code,
-  className,
-}: {
-  code: string;
-  language?: CodeLanguage;
-  className?: string;
-}) {
+export function CodeBlock({ code, className }: { code: string; className?: string }) {
   const html = useMemo(() => {
     if (code.length > MAX_HIGHLIGHT_CHARS) return null;
     const grammar = Prism.languages.json;
@@ -27,5 +18,6 @@ export function CodeBlock({
     className,
   );
   if (html === null) return <pre className={cls}>{code}</pre>;
+  // Safe: Prism.highlight HTML-escapes token content before wrapping it in spans.
   return <pre className={cls} dangerouslySetInnerHTML={{ __html: html }} />;
 }

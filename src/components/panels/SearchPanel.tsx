@@ -271,7 +271,6 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
                   {expanded && (
                     <CodeBlock
                       code={JSON.stringify(r, null, 2)}
-                      language="json"
                       className="max-h-80 rounded-none border-0 border-t bg-muted/30 px-3 py-2"
                     />
                   )}

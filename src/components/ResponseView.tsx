@@ -109,7 +109,7 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
       {typeof res.body === "object" && res.body !== null ? (
         <JsonView value={res.body} />
       ) : (
-        <CodeBlock code={pretty} language="json" />
+        <CodeBlock code={pretty} />
       )}
     </div>
   );

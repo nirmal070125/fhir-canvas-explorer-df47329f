@@ -82,7 +82,7 @@ export const JsonView = memo(function JsonView({ value }: { value: unknown }) {
 
   // Too many nodes for the interactive tree — fall back to a flat highlighted code block.
   if (fallbackCode !== null) {
-    return <CodeBlock code={fallbackCode} language="json" />;
+    return <CodeBlock code={fallbackCode} />;
   }
   return (
     <div className="fhir-json-view max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
