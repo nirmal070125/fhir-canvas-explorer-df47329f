@@ -44,6 +44,32 @@ function forwardedResponseHeaders(response: Response): Headers {
   return headers;
 }
 
+const MAX_REDIRECTS = 3;
+
+/**
+ * Follows redirects manually so every hop goes back through the SSRF guard —
+ * with `redirect: "follow"` an allowlisted host could bounce the request to an
+ * internal address. Authorization is dropped when a redirect crosses origins.
+ */
+async function fetchWithValidatedRedirects(
+  targetUrl: string,
+  init: { method: string; headers: Headers; body?: ArrayBuffer; signal: AbortSignal },
+): Promise<Response> {
+  let url = targetUrl;
+  const headers = new Headers(init.headers);
+
+  for (let hop = 0; ; hop++) {
+    const response = await fetch(url, { ...init, headers, redirect: "manual" });
+    const location = response.headers.get("location");
+    if (response.status < 300 || response.status >= 400 || !location) return response;
+    if (hop >= MAX_REDIRECTS) throw new Error("Too many redirects from the FHIR server.");
+
+    const next = await resolveFhirTarget(new URL(location, url).toString());
+    if (new URL(next).origin !== new URL(url).origin) headers.delete("authorization");
+    url = next;
+  }
+}
+
 async function proxyFhirRequest(request: Request): Promise<Response> {
   const requestedUrl = new URL(request.url).searchParams.get("url");
 
@@ -59,11 +85,10 @@ async function proxyFhirRequest(request: Request): Promise<Response> {
 
   try {
     const body = BODYLESS_METHODS.has(request.method) ? undefined : await request.arrayBuffer();
-    const response = await fetch(targetUrl, {
+    const response = await fetchWithValidatedRedirects(targetUrl, {
       method: request.method,
       headers: forwardedRequestHeaders(request),
       body,
-      redirect: "follow",
       signal: request.signal,
     });
 
