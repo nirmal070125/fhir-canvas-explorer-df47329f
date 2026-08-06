@@ -49,7 +49,8 @@ describe("SearchPanel", () => {
   it("adds and removes parameter rows", async () => {
     const user = userEvent.setup();
     renderWithProviders(<SearchPanel baseUrl={BASE} />);
-    const paramNameBoxes = () => screen.getAllByRole("combobox", { name: /search parameter name/i });
+    const paramNameBoxes = () =>
+      screen.getAllByRole("combobox", { name: /search parameter name/i });
     expect(paramNameBoxes()).toHaveLength(1);
 
     await user.click(screen.getByRole("button", { name: /add parameter/i }));
@@ -101,7 +102,13 @@ describe("SearchPanel", () => {
         resourceType: "Bundle",
         total: 2,
         entry: [
-          { resource: { resourceType: "Patient", id: "p1", name: [{ given: ["Alice"], family: "Smith" }] } },
+          {
+            resource: {
+              resourceType: "Patient",
+              id: "p1",
+              name: [{ given: ["Alice"], family: "Smith" }],
+            },
+          },
           { resource: { resourceType: "Observation", id: "o1", code: { text: "Heart rate" } } },
         ],
       },

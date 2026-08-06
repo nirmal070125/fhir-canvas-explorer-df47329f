@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fhirFetch } from "@/lib/fhir-client";
+import type { CapabilityResourceLike, CapabilityStatementLike } from "@/lib/fhir-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResponseView } from "../ResponseView";
@@ -33,10 +34,17 @@ function pageNumbers(current: number, total: number): Array<number | "…"> {
 }
 
 /** Case-insensitive match of resource rows against the type filter text. */
-function filterByType(resources: any[], filter: string): any[] {
+function filterByType(
+  resources: CapabilityResourceLike[],
+  filter: string,
+): CapabilityResourceLike[] {
   const q = filter.trim().toLowerCase();
   if (!q) return resources;
-  return resources.filter((r) => String(r.type ?? "").toLowerCase().includes(q));
+  return resources.filter((r) =>
+    String(r.type ?? "")
+      .toLowerCase()
+      .includes(q),
+  );
 }
 
 export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
@@ -53,8 +61,8 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
     enabled: !!baseUrl,
   });
 
-  const cs = res?.body as any;
-  const resources: any[] = cs?.rest?.[0]?.resource ?? [];
+  const cs = res?.body as CapabilityStatementLike | undefined;
+  const resources: CapabilityResourceLike[] = cs?.rest?.[0]?.resource ?? [];
 
   const filtered = useMemo(() => filterByType(resources, filter), [resources, filter]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -67,8 +75,8 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
         <div className="text-sm text-muted-foreground">
           {cs?.fhirVersion && (
             <>
-              FHIR <Badge variant="secondary">{cs.fhirVersion}</Badge> ·{" "}
-              {cs.software?.name} {cs.software?.version}
+              FHIR <Badge variant="secondary">{cs.fhirVersion}</Badge> · {cs.software?.name}{" "}
+              {cs.software?.version}
             </>
           )}
         </div>
@@ -88,108 +96,108 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
       </div>
 
       <TabsContent value="overview" className="m-0 space-y-4">
-      {resources.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              value={filter}
-              onChange={(e) => {
-                setFilter(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Filter resource types…"
-              className="max-w-xs text-sm"
-            />
-            <span className="text-xs text-muted-foreground">
-              {filtered.length} of {resources.length} resource types
-            </span>
-          </div>
-        <div className="overflow-auto rounded-md border bg-card">
-          {/* Fixed layout so column widths don't shift between pages. */}
-          <table className="w-full table-fixed text-sm">
-            <thead className="bg-muted/50 text-left">
-              <tr>
-                <th className="w-80 px-3 py-2">Resource</th>
-                <th className="px-3 py-2">Interactions</th>
-                <th className="w-32 px-3 py-2">Search Params</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.map((r) => (
-                <tr key={r.type} className="border-t">
-                  <td className="px-3 py-2 font-mono text-xs">{r.type}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1">
-                      {(r.interaction ?? []).map((i: any) => (
-                        <Badge key={i.code} variant="outline" className="text-[10px]">
-                          {i.code}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className="text-xs text-muted-foreground">
-                      {(r.searchParam ?? []).length}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-          {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    aria-disabled={safePage === 1}
-                    className={safePage === 1 ? "pointer-events-none opacity-50" : ""}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPage((p) => Math.max(1, p - 1));
-                    }}
-                  />
-                </PaginationItem>
-                {pageNumbers(safePage, totalPages).map((p, i) => (
-                  <PaginationItem key={`${p}-${i}`}>
-                    {p === "…" ? (
-                      <span className="px-2 text-sm text-muted-foreground">…</span>
-                    ) : (
-                      <PaginationLink
-                        href="#"
-                        isActive={p === safePage}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage(p);
-                        }}
-                      >
-                        {p}
-                      </PaginationLink>
-                    )}
+        {resources.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                value={filter}
+                onChange={(e) => {
+                  setFilter(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Filter resource types…"
+                className="max-w-xs text-sm"
+              />
+              <span className="text-xs text-muted-foreground">
+                {filtered.length} of {resources.length} resource types
+              </span>
+            </div>
+            <div className="overflow-auto rounded-md border bg-card">
+              {/* Fixed layout so column widths don't shift between pages. */}
+              <table className="w-full table-fixed text-sm">
+                <thead className="bg-muted/50 text-left">
+                  <tr>
+                    <th className="w-80 px-3 py-2">Resource</th>
+                    <th className="px-3 py-2">Interactions</th>
+                    <th className="w-32 px-3 py-2">Search Params</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((r) => (
+                    <tr key={r.type} className="border-t">
+                      <td className="px-3 py-2 font-mono text-xs">{r.type}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-1">
+                          {(r.interaction ?? []).map((i) => (
+                            <Badge key={i.code} variant="outline" className="text-[10px]">
+                              {i.code}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="text-xs text-muted-foreground">
+                          {(r.searchParam ?? []).length}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalPages > 1 && (
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      aria-disabled={safePage === 1}
+                      className={safePage === 1 ? "pointer-events-none opacity-50" : ""}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage((p) => Math.max(1, p - 1));
+                      }}
+                    />
                   </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    aria-disabled={safePage === totalPages}
-                    className={safePage === totalPages ? "pointer-events-none opacity-50" : ""}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPage((p) => Math.min(totalPages, p + 1));
-                    }}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
-        </div>
-      )}
-      {resources.length === 0 && (
-        <div className="rounded-md border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-          {loading ? "Loading capability statement…" : "No capability data available."}
-        </div>
-      )}
+                  {pageNumbers(safePage, totalPages).map((p, i) => (
+                    <PaginationItem key={`${p}-${i}`}>
+                      {p === "…" ? (
+                        <span className="px-2 text-sm text-muted-foreground">…</span>
+                      ) : (
+                        <PaginationLink
+                          href="#"
+                          isActive={p === safePage}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(p);
+                          }}
+                        >
+                          {p}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      aria-disabled={safePage === totalPages}
+                      className={safePage === totalPages ? "pointer-events-none opacity-50" : ""}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage((p) => Math.min(totalPages, p + 1));
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </div>
+        )}
+        {resources.length === 0 && (
+          <div className="rounded-md border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+            {loading ? "Loading capability statement…" : "No capability data available."}
+          </div>
+        )}
       </TabsContent>
 
       <TabsContent value="raw" className="m-0">

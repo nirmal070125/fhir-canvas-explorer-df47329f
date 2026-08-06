@@ -8,8 +8,11 @@ export default defineConfig(
   ...nextTypeScript,
   {
     rules: {
+      // Matches the pre-existing main config; underscore-prefixed args are common in tests.
       "@typescript-eslint/no-unused-vars": "off",
-      "@typescript-eslint/no-explicit-any": "off",
+      // React Compiler advisories — pre-existing patterns, tracked but not blocking.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/purity": "warn",
     },
   },
   eslintPluginPrettier,

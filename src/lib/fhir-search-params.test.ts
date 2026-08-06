@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  COMMON_SEARCH_PARAMS,
-  mergeSearchParams,
-  valueHintForType,
-} from "./fhir-search-params";
+import { COMMON_SEARCH_PARAMS, mergeSearchParams, valueHintForType } from "./fhir-search-params";
 
 describe("mergeSearchParams", () => {
   it("lists resource-specific params (sorted) before common result/meta params", () => {

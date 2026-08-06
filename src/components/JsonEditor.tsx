@@ -35,8 +35,8 @@ export function JsonEditor({ value, onChange, rows = 14, className, ariaLabel }:
     try {
       JSON.parse(value);
       return null;
-    } catch (e: any) {
-      return String(e?.message ?? "Invalid JSON");
+    } catch (e: unknown) {
+      return e instanceof Error ? e.message : "Invalid JSON";
     }
   }, [value]);
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { CapabilityStatementLike } from "@/lib/fhir-types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,7 +26,7 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
     try {
       const res = await fhirFetch("/metadata", {}, url);
       if (res.ok) {
-        const body = res.body as any;
+        const body = res.body as CapabilityStatementLike | undefined;
         setStatus("ok");
         setInfo(
           `FHIR ${body?.fhirVersion ?? "?"} · ${body?.software?.name ?? "server"} · ${res.durationMs}ms`,
@@ -34,9 +35,9 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
         setStatus("fail");
         setInfo(`HTTP ${res.status}`);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setStatus("fail");
-      setInfo(e?.message || "Network error (check CORS / server running)");
+      setInfo((e instanceof Error && e.message) || "Network error (check CORS / server running)");
     }
   }
 
@@ -81,7 +82,9 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
             Connect
           </Button>
           <div className="flex h-9 items-center gap-2 rounded-md border bg-muted/30 px-3 text-sm">
-            {status === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            {status === "checking" && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
             {status === "ok" && <CheckCircle2 className="h-4 w-4 text-primary" />}
             {status === "fail" && <XCircle className="h-4 w-4 text-destructive" />}
             <span className="max-w-[320px] truncate text-muted-foreground">{info || "—"}</span>

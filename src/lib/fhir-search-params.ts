@@ -33,15 +33,27 @@ export const COMMON_SEARCH_PARAMS: readonly SearchParamDef[] = [
   { name: "_source", type: "uri", documentation: "Source system (meta.source)" },
   { name: "_text", type: "string", documentation: "Text search on the narrative" },
   { name: "_content", type: "string", documentation: "Text search on the whole resource" },
-  { name: "_has", type: "special", documentation: "Reverse chaining (e.g. _has:Observation:patient:code)" },
+  {
+    name: "_has",
+    type: "special",
+    documentation: "Reverse chaining (e.g. _has:Observation:patient:code)",
+  },
   // Result parameters
   { name: "_sort", type: "string", documentation: "Sort order, e.g. -date,name" },
   { name: "_count", type: "number", documentation: "Page size (results per page)" },
-  { name: "_include", type: "string", documentation: "Include referenced resources, e.g. Observation:patient" },
+  {
+    name: "_include",
+    type: "string",
+    documentation: "Include referenced resources, e.g. Observation:patient",
+  },
   { name: "_revinclude", type: "string", documentation: "Include resources referencing these" },
   { name: "_summary", type: "token", documentation: "true | text | data | count | false" },
   { name: "_total", type: "token", documentation: "none | estimate | accurate" },
-  { name: "_elements", type: "string", documentation: "Comma-separated list of elements to return" },
+  {
+    name: "_elements",
+    type: "string",
+    documentation: "Comma-separated list of elements to return",
+  },
 ];
 
 /**
@@ -93,7 +105,11 @@ export const CURATED_RESOURCE_SEARCH_PARAMS: Record<string, SearchParamDef[]> = 
     { name: "subject", type: "reference", documentation: "Who has the condition" },
     { name: "code", type: "token", documentation: "Code for the condition" },
     { name: "category", type: "token", documentation: "problem-list-item | encounter-diagnosis" },
-    { name: "clinical-status", type: "token", documentation: "active | recurrence | resolved | ..." },
+    {
+      name: "clinical-status",
+      type: "token",
+      documentation: "active | recurrence | resolved | ...",
+    },
     { name: "verification-status", type: "token", documentation: "confirmed | provisional | ..." },
     { name: "onset-date", type: "date", documentation: "Date the condition began" },
     { name: "recorded-date", type: "date", documentation: "Date the condition was recorded" },
@@ -146,7 +162,11 @@ export const CURATED_RESOURCE_SEARCH_PARAMS: Record<string, SearchParamDef[]> = 
     { name: "patient", type: "reference", documentation: "Who the allergy is for" },
     { name: "code", type: "token", documentation: "Allergy/substance code" },
     { name: "clinical-status", type: "token", documentation: "active | inactive | resolved" },
-    { name: "category", type: "token", documentation: "food | medication | environment | biologic" },
+    {
+      name: "category",
+      type: "token",
+      documentation: "food | medication | environment | biologic",
+    },
     { name: "date", type: "date", documentation: "Date recorded" },
   ],
   Immunization: [

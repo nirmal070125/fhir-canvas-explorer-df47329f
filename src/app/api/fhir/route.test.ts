@@ -50,7 +50,9 @@ describe("FHIR proxy", () => {
   });
 
   it("forwards request bodies and methods", async () => {
-    const upstreamFetch = vi.fn(async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 201 }));
+    const upstreamFetch = vi.fn(
+      async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 201 }),
+    );
     vi.stubGlobal("fetch", upstreamFetch);
 
     const request = new Request(`http://localhost/api/fhir?url=${encodeURIComponent(TARGET_URL)}`, {
@@ -100,9 +102,7 @@ describe("FHIR proxy", () => {
     const upstreamFetch = vi.fn();
     vi.stubGlobal("fetch", upstreamFetch);
     const dns = await import("node:dns/promises");
-    vi.mocked(dns.lookup).mockResolvedValueOnce([
-      { address: "192.168.1.10", family: 4 },
-    ] as never);
+    vi.mocked(dns.lookup).mockResolvedValueOnce([{ address: "192.168.1.10", family: 4 }] as never);
 
     const response = await GET(
       new Request(`http://localhost/api/fhir?url=${encodeURIComponent("http://rebind.example/x")}`),

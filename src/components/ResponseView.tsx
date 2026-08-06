@@ -188,10 +188,17 @@ function OperationOutcomeView({ issues }: { issues: OperationOutcomeIssue[] }) {
         {issues.map((issue, i) => (
           <li key={i} className="px-3 py-2 text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className={cn("text-[10px]", SEVERITY_STYLES[issue.severity ?? ""] ?? "bg-muted text-foreground")}>
+              <Badge
+                className={cn(
+                  "text-[10px]",
+                  SEVERITY_STYLES[issue.severity ?? ""] ?? "bg-muted text-foreground",
+                )}
+              >
                 {issue.severity ?? "issue"}
               </Badge>
-              {issue.code && <span className="font-mono text-xs text-muted-foreground">{issue.code}</span>}
+              {issue.code && (
+                <span className="font-mono text-xs text-muted-foreground">{issue.code}</span>
+              )}
             </div>
             {issueText(issue) && <p className="mt-1 text-sm text-foreground">{issueText(issue)}</p>}
           </li>

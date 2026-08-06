@@ -46,40 +46,43 @@ export function ExplorerBusProvider({
 
   // Memoized so the context value keeps its identity between renders —
   // otherwise every consumer re-renders whenever the provider does.
-  const bus: ExplorerBus = useMemo(() => ({
-    tab,
-    setTab,
-    writePrefill,
-    openWrite: (p) => {
-      setWritePrefill(p);
-      setTab("write");
-    },
-    consumeWritePrefill: () => {
-      const p = writePrefill;
-      if (p) setWritePrefill(null);
-      return p;
-    },
-    rawPrefill,
-    openRaw: (p) => {
-      setRawPrefill(p);
-      setTab("raw");
-    },
-    consumeRawPrefill: () => {
-      const p = rawPrefill;
-      if (p) setRawPrefill(null);
-      return p;
-    },
-    readPrefill,
-    openRead: (type, id) => {
-      setReadPrefill({ type, id });
-      setTab("instance");
-    },
-    consumeReadPrefill: () => {
-      const p = readPrefill;
-      if (p) setReadPrefill(null);
-      return p;
-    },
-  }), [tab, setTab, writePrefill, rawPrefill, readPrefill]);
+  const bus: ExplorerBus = useMemo(
+    () => ({
+      tab,
+      setTab,
+      writePrefill,
+      openWrite: (p) => {
+        setWritePrefill(p);
+        setTab("write");
+      },
+      consumeWritePrefill: () => {
+        const p = writePrefill;
+        if (p) setWritePrefill(null);
+        return p;
+      },
+      rawPrefill,
+      openRaw: (p) => {
+        setRawPrefill(p);
+        setTab("raw");
+      },
+      consumeRawPrefill: () => {
+        const p = rawPrefill;
+        if (p) setRawPrefill(null);
+        return p;
+      },
+      readPrefill,
+      openRead: (type, id) => {
+        setReadPrefill({ type, id });
+        setTab("instance");
+      },
+      consumeReadPrefill: () => {
+        const p = readPrefill;
+        if (p) setReadPrefill(null);
+        return p;
+      },
+    }),
+    [tab, setTab, writePrefill, rawPrefill, readPrefill],
+  );
 
   return <Ctx.Provider value={bus}>{children}</Ctx.Provider>;
 }

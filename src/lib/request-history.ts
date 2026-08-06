@@ -22,7 +22,10 @@ export function getHistory(): HistoryEntry[] {
   }
 }
 
-function isSameRequest(a: Pick<HistoryEntry, "method" | "path">, b: Pick<HistoryEntry, "method" | "path">) {
+function isSameRequest(
+  a: Pick<HistoryEntry, "method" | "path">,
+  b: Pick<HistoryEntry, "method" | "path">,
+) {
   return a.method === b.method && a.path === b.path;
 }
 

@@ -9,7 +9,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getHistory, clearHistory, onHistoryChange, type HistoryEntry } from "@/lib/request-history";
+import {
+  getHistory,
+  clearHistory,
+  onHistoryChange,
+  type HistoryEntry,
+} from "@/lib/request-history";
 import { useExplorerBus } from "@/lib/explorer-bus";
 import { cn } from "@/lib/utils";
 

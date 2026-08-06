@@ -29,7 +29,13 @@ export function RowSection({
 }
 
 /** Ghost trash-icon button used to delete one row. */
-export function RemoveRowButton({ onClick, ariaLabel }: { onClick: () => void; ariaLabel: string }) {
+export function RemoveRowButton({
+  onClick,
+  ariaLabel,
+}: {
+  onClick: () => void;
+  ariaLabel: string;
+}) {
   return (
     <Button variant="ghost" size="icon" onClick={onClick} aria-label={ariaLabel}>
       <Trash2 className="h-4 w-4" />

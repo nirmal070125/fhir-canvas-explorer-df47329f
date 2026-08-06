@@ -30,7 +30,9 @@ describe("LoadSampleDataButton", () => {
     render(<LoadSampleDataButton baseUrl="http://x" />);
     // The description now lives in the button's tooltip (title attribute).
     const button = screen.getByRole("button", { name: /load sample data/i });
-    await vi.waitFor(() => expect(button).toHaveAttribute("title", expect.stringMatching(/6 synthetic patients/i)));
+    await vi.waitFor(() =>
+      expect(button).toHaveAttribute("title", expect.stringMatching(/6 synthetic patients/i)),
+    );
     expect(button.getAttribute("title")).not.toMatch(/10 synthetic patients/i);
   });
 
@@ -39,7 +41,10 @@ describe("LoadSampleDataButton", () => {
     render(<LoadSampleDataButton baseUrl="http://x" />);
     const button = screen.getByRole("button", { name: /load sample data/i });
     await vi.waitFor(() =>
-      expect(button).toHaveAttribute("title", expect.stringMatching(/seeds synthetic patient data/i)),
+      expect(button).toHaveAttribute(
+        "title",
+        expect.stringMatching(/seeds synthetic patient data/i),
+      ),
     );
   });
 

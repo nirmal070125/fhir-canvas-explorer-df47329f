@@ -18,8 +18,14 @@ export function useFhirRequest(baseUrl: string) {
     } catch (e: unknown) {
       if (id === seq.current) {
         setRes({
-          status: 0, ok: false, headers: {}, body: { error: e instanceof Error ? e.message : String(e) }, raw: "",
-          url: "", method: typeof init.method === "string" ? init.method : "GET", durationMs: 0,
+          status: 0,
+          ok: false,
+          headers: {},
+          body: { error: e instanceof Error ? e.message : String(e) },
+          raw: "",
+          url: "",
+          method: typeof init.method === "string" ? init.method : "GET",
+          durationMs: 0,
         });
       }
     } finally {

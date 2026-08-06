@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { BundleLike, ResourceLike } from "@/lib/fhir-types";
 import { encodeFhirPathSegment } from "@/lib/fhir-client";
 import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,7 @@ import { Search, ChevronDown } from "lucide-react";
 
 export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const [resourceType, setResourceType] = useState("Patient");
-  const [params, setParams] = useState<Array<{ k: string; v: string }>>([
-    { k: "_count", v: "10" },
-  ]);
+  const [params, setParams] = useState<Array<{ k: string; v: string }>>([{ k: "_count", v: "10" }]);
   const { res, loading, run: send } = useFhirRequest(baseUrl);
   const [usePost, setUsePost] = useState(false);
   const [sortParam, setSortParam] = useState("");
@@ -76,7 +75,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
     void send(url);
   }
 
-  const bundle = res?.body as any;
+  const bundle = res?.body as BundleLike | undefined;
   const links: Array<{ relation: string; url: string }> = bundle?.link ?? [];
 
   const form = (
@@ -232,7 +231,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
             )}
           </div>
           <ul className="divide-y">
-            {bundle.entry.slice(0, 50).map((e: any, i: number) => {
+            {bundle.entry.slice(0, 50).map((e, i) => {
               const r = e.resource ?? {};
               const expanded = openRows.has(i);
               return (
@@ -296,13 +295,13 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   );
 }
 
-function summarize(r: any): string {
+function summarize(r: ResourceLike): string {
   if (!r) return "";
   // HumanName (Patient, Practitioner, RelatedPerson, …)
   if (Array.isArray(r.name) && r.name[0]) {
     const n = r.name[0];
     const assembled = [n.prefix?.join(" "), n.given?.join(" "), n.family].filter(Boolean).join(" ");
-    if (assembled || n.text) return assembled || n.text;
+    if (assembled || n.text) return assembled || n.text || "";
   }
   if (typeof r.name === "string") return r.name;
   // Coded concepts (Observation, Condition, Procedure, …)

@@ -39,7 +39,9 @@ describe("ResponseView", () => {
   });
 
   it("renders a collapsible headers section when headers are present", () => {
-    render(<ResponseView res={makeResponse({ headers: { "content-type": "application/fhir+json" } })} />);
+    render(
+      <ResponseView res={makeResponse({ headers: { "content-type": "application/fhir+json" } })} />,
+    );
     // Header count renders as a badge next to the "Headers" summary label.
     expect(screen.getByText(/^headers$/i)).toBeInTheDocument();
     expect(screen.getByText("content-type")).toBeInTheDocument();

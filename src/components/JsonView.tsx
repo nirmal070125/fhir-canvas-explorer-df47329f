@@ -46,7 +46,7 @@ export const JsonView = memo(function JsonView({ value }: { value: unknown }) {
       ) {
         return (
           <span className="json-view--string">
-            "
+            &quot;
             <button
               type="button"
               className="underline decoration-dotted underline-offset-2"
@@ -55,14 +55,14 @@ export const JsonView = memo(function JsonView({ value }: { value: unknown }) {
             >
               {node}
             </button>
-            "
+            &quot;
           </span>
         );
       }
       if (/^https?:\/\//.test(node)) {
         return (
           <span className="json-view--string">
-            "
+            &quot;
             <a
               href={node}
               target="_blank"
@@ -71,7 +71,7 @@ export const JsonView = memo(function JsonView({ value }: { value: unknown }) {
             >
               {node}
             </a>
-            "
+            &quot;
           </span>
         );
       }

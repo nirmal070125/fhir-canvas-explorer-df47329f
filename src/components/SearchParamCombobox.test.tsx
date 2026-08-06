@@ -19,7 +19,12 @@ vi.mock("@/hooks/use-resource-search-params", () => ({
 function setup(value = "") {
   const onChange = vi.fn();
   render(
-    <SearchParamCombobox resourceType="Patient" baseUrl="http://x" value={value} onChange={onChange} />,
+    <SearchParamCombobox
+      resourceType="Patient"
+      baseUrl="http://x"
+      value={value}
+      onChange={onChange}
+    />,
   );
   return { onChange, user: userEvent.setup() };
 }
@@ -48,7 +53,12 @@ describe("SearchParamCombobox", () => {
   it("filters and selects a parameter", async () => {
     const onChange = vi.fn();
     render(
-      <SearchParamCombobox resourceType="Patient" baseUrl="http://x" value="" onChange={onChange} />,
+      <SearchParamCombobox
+        resourceType="Patient"
+        baseUrl="http://x"
+        value=""
+        onChange={onChange}
+      />,
     );
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox"));
@@ -60,7 +70,12 @@ describe("SearchParamCombobox", () => {
   it("allows an arbitrary/custom parameter name", async () => {
     const onChange = vi.fn();
     render(
-      <SearchParamCombobox resourceType="Patient" baseUrl="http://x" value="" onChange={onChange} />,
+      <SearchParamCombobox
+        resourceType="Patient"
+        baseUrl="http://x"
+        value=""
+        onChange={onChange}
+      />,
     );
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox"));

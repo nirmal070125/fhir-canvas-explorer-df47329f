@@ -91,7 +91,11 @@ export async function fhirFetch(
   try {
     res = await fetch(requestUrl, { ...init, method, headers });
   } catch (e) {
-    recordRequest({ method, path: isAbsolute ? path : path.startsWith("/") ? path : `/${path}`, status: 0 });
+    recordRequest({
+      method,
+      path: isAbsolute ? path : path.startsWith("/") ? path : `/${path}`,
+      status: 0,
+    });
     throw e;
   }
   const raw = await res.text();

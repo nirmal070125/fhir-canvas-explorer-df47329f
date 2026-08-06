@@ -114,7 +114,12 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
   const form = (
     <>
       <Field label="Scope">
-        <ChoiceCards choices={SCOPES} value={scope} onChange={setScope} gridClass="grid grid-cols-3 gap-2" />
+        <ChoiceCards
+          choices={SCOPES}
+          value={scope}
+          onChange={setScope}
+          gridClass="grid grid-cols-3 gap-2"
+        />
       </Field>
 
       {/* Target: resource type / id (for type & instance scope) + operation */}

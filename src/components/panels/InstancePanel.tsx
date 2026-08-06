@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ResourceLike } from "@/lib/fhir-types";
 import { encodeFhirPathSegment } from "@/lib/fhir-client";
 import { useFhirRequest } from "@/hooks/use-fhir-request";
 import { Button } from "@/components/ui/button";
@@ -92,7 +93,7 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
   })();
 
   // "Edit this resource" on a successful read jumps to Create/Update with body, id and ETag prefilled.
-  const readBody = res?.body as any;
+  const readBody = res?.body as ResourceLike | undefined;
   const canEdit =
     op === "read" &&
     res?.ok &&
@@ -103,7 +104,7 @@ export function InstancePanel({ baseUrl }: { baseUrl: string }) {
     readBody.resourceType !== "OperationOutcome";
 
   function editCurrent() {
-    if (!canEdit) return;
+    if (!canEdit || !readBody?.resourceType) return;
     bus?.openWrite({
       op: "update",
       type: readBody.resourceType,
