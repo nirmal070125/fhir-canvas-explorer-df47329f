@@ -22,7 +22,7 @@ spec:
           password: DB_PASSWORD
           database: DB_NAME
   container:
-    image: host.k3d.internal:10082/default-fhir-canvas-explorer-fhir-server:v1-dc822edf
+    image: host.k3d.internal:10082/default-fhir-canvas-explorer-fhir-server:v1-13006e70
     env:
       - key: SERVER_PORT
         value: "9090"
