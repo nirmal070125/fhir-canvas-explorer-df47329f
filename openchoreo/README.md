@@ -107,6 +107,10 @@ Platform findings from that pass:
   registry (`localhost:10082` on the host).
 - Workload edits alone do not recut a ComponentRelease; delete the stale
   release (or change the Component spec) to force a new one.
+- If the host machine's DNS search domain leaks into pods (k3d inherits it)
+  and that domain wildcard-answers, musl-based images cannot resolve external
+  names (the chatbot's OpenAI calls fail with ENOTFOUND); a CoreDNS override
+  returning NXDOMAIN for that domain fixes it.
 
 ## Remaining work
 
