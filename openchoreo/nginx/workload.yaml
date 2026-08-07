@@ -13,14 +13,28 @@ spec:
       port: 8080
       visibility: [external]
   container:
-    image: nginx:1.27-alpine
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     env:
       - key: EXPLORER_WEB_UPSTREAM
         value: explorer-web:3000
+      - key: TRUSTED_PROXY_CIDR
+        value: 10.42.0.0/16
     files:
       - key: explorer.conf.template
         mountPath: /etc/nginx/templates
         value: |
+          # Recover the real client address from the gateway's X-Forwarded-For
+          # so X-Real-IP (the app's rate-limit key) is not the gateway pod IP.
+          set_real_ip_from ${TRUSTED_PROXY_CIDR};
+          real_ip_header X-Forwarded-For;
+          real_ip_recursive on;
+
+          # TLS terminates at the gateway; pass its scheme through when present.
+          map $http_x_forwarded_proto $forwarded_proto {
+            default $http_x_forwarded_proto;
+            ""      $scheme;
+          }
+
           server {
             listen       8080;
             server_name  _;
@@ -40,7 +54,7 @@ spec:
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_set_header X-Forwarded-Proto $forwarded_proto;
               proxy_buffering off;
               proxy_read_timeout 65s;
             }

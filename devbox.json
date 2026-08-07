@@ -5,7 +5,7 @@
     "bun@latest",
     "kubectl@latest",
     "kubernetes-helm@latest",
-    "kind@latest",
+    "k3d@latest",
     "jq@latest"
   ],
   "shell": {

@@ -24,12 +24,13 @@ internet ── OpenChoreo gateway (Envoy, TLS)
         fhir-server         Go FHIR R4 server (wso2-fhir-server repo)
               │
               ▼  visibility: project
-        fhir-postgres       platform-managed postgres Resource
+        fhir-postgres       platform-provisioned in-cluster postgres
 ```
 
 Each project maps to a cell (namespace); OpenChoreo generates NetworkPolicies
-from endpoint visibility, so only `explorer-nginx` is reachable from outside.
-`project` visibility scopes the inner tiers to the cell. Finer-grained
+from endpoint visibility, so `explorer-nginx` is the only tier the gateway
+routes external traffic to. `project` visibility scopes the inner tiers to
+the cell. Finer-grained
 "only-nginx-may-call-web" pinning inside the cell is not expressible via
 visibility alone today; the rate limiter keys on nginx's `X-Real-IP`, so
 traffic that bypasses nginx lands in the shared fail-closed bucket.
@@ -51,12 +52,12 @@ Tooling is provisioned through [devbox](https://www.jetify.com/devbox)
 (see `devbox.json` at the repo root):
 
 ```sh
-devbox shell            # node, bun, kubectl, helm, kind, jq
+devbox shell            # node, bun, kubectl, helm, k3d, jq
 devbox run install-occ  # OpenChoreo CLI into .devbox/bin
 ```
 
 You also need an OpenChoreo control plane reachable from `kubectl` (for local
-evaluation, the OpenChoreo quick-start sets one up on kind) with:
+evaluation, the OpenChoreo docs set one up on k3d) with:
 
 - the getting-started bundle applied (environments, `default` deployment
   pipeline, `deployment/*` ClusterComponentTypes, `dockerfile-builder`
@@ -76,10 +77,14 @@ kubectl apply -f openchoreo/project -f openchoreo/postgres \
   -f openchoreo/fhir-server -f openchoreo/web -f openchoreo/nginx
 ```
 
+Secrets are injected as env vars, so rotating a value in the store needs a
+pod restart to take effect — `seed-secrets.sh` does this for the OpenAI key.
+
 Builds are triggered by creating a `WorkflowRun` per source-built component
-(or pushing with `autoBuild` + webhook); the built image then replaces the
-placeholder `container.image`. Promotion to staging/production is done by
-adding the corresponding `ProjectReleaseBinding`s and advancing them.
+(or pushing with `autoBuild` + webhook); update `container.image` to the tag
+the run publishes (`v1-<git-sha>`) until generate-workload wires it
+automatically. Promotion to staging/production is done by adding the
+corresponding `ProjectReleaseBinding`s and advancing them.
 
 ## Validation status
 
