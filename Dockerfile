@@ -7,8 +7,6 @@ FROM dependencies AS builder
 COPY . .
 RUN bun run build
 
-# App-only runner: the nginx edge lives in its own image (deploy/nginx) and
-# reaches this container over the cluster network, so bind to all interfaces.
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
