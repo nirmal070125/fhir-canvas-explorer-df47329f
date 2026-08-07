@@ -1,7 +1,6 @@
-# Platform setup, applied once per data plane: makes Envoy determine the
-# client address from the TCP socket (useRemoteAddress), sanitize spoofable
-# inbound headers, and emit x-envoy-external-address, which the nginx tier
-# forwards as X-Real-IP for the app's rate limiter.
+# Behind a gateway the client identity must come from the outermost hop's TCP
+# socket, not from forgeable headers: Envoy emits it as x-envoy-external-address,
+# which nginx forwards as X-Real-IP for the app's per-client rate limiter.
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: HTTPListenerPolicy
 metadata:
