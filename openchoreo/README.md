@@ -81,10 +81,35 @@ Builds are triggered by creating a `WorkflowRun` per source-built component
 placeholder `container.image`. Promotion to staging/production is done by
 adding the corresponding `ProjectReleaseBinding`s and advancing them.
 
+## Validation status
+
+Validated end to end on a manual k3d install (charts 1.2.2): all four tiers
+run, and gateway → nginx → Next.js → `/api/fhir` proxy → FHIR server →
+postgres serves 200s with the security headers and SSRF allowlist intact.
+
+Platform findings from that pass:
+
+- The build pipeline's `generate-workload` step emits its own
+  `<component>-workload` resource, which collides with the hand-authored
+  Workloads here and wedges the component controller ("Multiple Workloads
+  found"). Until the descriptors are reconciled with that convention, delete
+  the generated duplicate and patch the built image into the Workload by hand.
+- The workflow plane's user-mode networking (podman under pasta) cannot
+  sustain `bun install`'s registry traffic — parallel connections get refused
+  and long serial runs exhaust the flow table. Go builds (single HTTP/2
+  connection) are unaffected; the fhir-server and nginx images built
+  in-cluster, while the explorer-web image was built locally and pushed to
+  the workflow-plane registry (`localhost:10082` on the host).
+- Workload edits alone do not recut a ComponentRelease; delete the stale
+  release (or change the Component spec) to force a new one.
+
 ## Remaining work
 
-- [ ] Validate WorkflowRun builds and placeholder image replacement on a real
-      control plane
+- [ ] Reconcile hand-authored Workloads with the generate-workload convention
+      so in-cluster builds wire images automatically
+- [ ] explorer-web in-cluster build blocked on workflow-plane networking (see
+      above) — needs a platform-side fix or a registry mirror reachable over
+      few connections
 - [ ] Environment promotion (dev → staging) with per-env config overrides
 - [ ] Production DB posture: managed postgres or an operator instead of the
       single-replica trait-backed pod; drop `FHIR_CREATE_TABLES`
