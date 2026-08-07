@@ -1,11 +1,12 @@
 FROM oven/bun:1.3.14-alpine AS dependencies
 WORKDIR /app
 COPY package.json bun.lock ./
-# In-cluster builds run under user-mode networking (podman/pasta) that drops
-# connections under load; low concurrency plus retries rides it out, and bun's
-# download cache keeps each retry's progress.
+# In-cluster builds run under user-mode networking (podman/pasta) that refuses
+# parallel connections; CI passes BUN_NETWORK_CONCURRENCY=1 via buildArgs while
+# local builds keep bun's fast default. Retries reuse bun's download cache.
+ARG BUN_NETWORK_CONCURRENCY=48
 RUN for i in 1 2 3 4 5; do \
-      bun install --frozen-lockfile --network-concurrency 8 && break; \
+      bun install --frozen-lockfile --network-concurrency "$BUN_NETWORK_CONCURRENCY" && break; \
       [ "$i" = 5 ] && exit 1; sleep 5; \
     done
 
