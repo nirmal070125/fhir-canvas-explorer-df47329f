@@ -8,5 +8,27 @@ metadata:
     openchoreo.dev/description: >-
       WSO2 Open Healthcare reference app: FHIR R4 explorer UI with an
       MCP-backed read-only assistant.
+  labels:
+    openchoreo.dev/name: fhir-canvas-explorer
 spec:
-  deploymentPipelineRef: default
+  deploymentPipelineRef:
+    name: default
+  type:
+    kind: ClusterProjectType
+    name: default
+---
+# Binds the project's latest release into the development environment; the
+# controller seeds spec.projectRelease with the newest ProjectRelease, and
+# promotion to later environments is done by advancing sibling bindings.
+apiVersion: openchoreo.dev/v1alpha1
+kind: ProjectReleaseBinding
+metadata:
+  name: fhir-canvas-explorer-development
+  namespace: default
+  labels:
+    openchoreo.dev/project: fhir-canvas-explorer
+    openchoreo.dev/environment: development
+spec:
+  owner:
+    projectName: fhir-canvas-explorer
+  environment: development

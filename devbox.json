@@ -11,12 +11,13 @@
   "shell": {
     "init_hook": [
       "export PATH=\"$PATH:$PWD/.devbox/bin\"",
-      "command -v choreoctl >/dev/null || echo 'choreoctl not found — run: devbox run install-choreoctl'"
+      "command -v occ >/dev/null || echo 'occ not found — run: devbox run install-occ'"
     ],
     "scripts": {
-      "install-choreoctl": [
+      "install-occ": [
         "mkdir -p .devbox/bin",
-        "curl -fsSL https://openchoreo.dev/install/choreoctl.sh | bash -s -- --install-dir .devbox/bin"
+        "OCC_VERSION=v1.2.2; ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/'); OS=$(uname -s | tr '[:upper:]' '[:lower:]')",
+        "curl -fsSL \"https://github.com/openchoreo/openchoreo/releases/download/${OCC_VERSION}/occ_${OCC_VERSION}_${OS}_${ARCH}.tar.gz\" | tar -xz -C .devbox/bin occ"
       ],
       "dev": ["bun install", "bun run dev"],
       "test": ["NODE_ENV=test bun run test"]
