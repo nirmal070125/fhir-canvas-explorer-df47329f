@@ -44,6 +44,7 @@ traffic that bypasses nginx lands in the shared fail-closed bucket.
 | `web/` | Next.js app Component + Workload + OpenAI SecretReference |
 | `fhir-server/` | FHIR R4 server Component + Workload (project endpoint) |
 | `postgres/` | Postgres Resource + development ResourceReleaseBinding |
+| `platform/` | Once-per-data-plane setup (gateway client-address policy) |
 | `seed-secrets.sh` | Seeds the OpenBao entries from .env.local / the environment |
 
 ## Prerequisites

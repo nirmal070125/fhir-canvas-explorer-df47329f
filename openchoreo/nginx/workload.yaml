@@ -17,17 +17,17 @@ spec:
     env:
       - key: EXPLORER_WEB_UPSTREAM
         value: explorer-web:3000
-      - key: TRUSTED_PROXY_CIDR
-        value: 10.42.0.0/16
     files:
       - key: explorer.conf.template
         mountPath: /etc/nginx/templates
         value: |
-          # Recover the real client address from the gateway's X-Forwarded-For
-          # so X-Real-IP (the app's rate-limit key) is not the gateway pod IP.
-          set_real_ip_from ${TRUSTED_PROXY_CIDR};
-          real_ip_header X-Forwarded-For;
-          real_ip_recursive on;
+          # The gateway's HTTPListenerPolicy (useRemoteAddress) makes Envoy set
+          # x-envoy-external-address from the real socket peer and sanitize the
+          # spoofable variants, so it is the trustworthy client address.
+          map $http_x_envoy_external_address $client_ip {
+            default $http_x_envoy_external_address;
+            ""      $remote_addr;
+          }
 
           # TLS terminates at the gateway; pass its scheme through when present.
           map $http_x_forwarded_proto $forwarded_proto {
@@ -52,7 +52,7 @@ spec:
               proxy_pass http://${EXPLORER_WEB_UPSTREAM};
               proxy_http_version 1.1;
               proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Real-IP $client_ip;
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               proxy_set_header X-Forwarded-Proto $forwarded_proto;
               proxy_buffering off;
