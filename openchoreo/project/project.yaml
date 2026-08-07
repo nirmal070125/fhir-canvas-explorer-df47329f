@@ -16,16 +16,3 @@ spec:
   type:
     kind: ClusterProjectType
     name: default
----
-apiVersion: openchoreo.dev/v1alpha1
-kind: ProjectReleaseBinding
-metadata:
-  name: fhir-canvas-explorer-development
-  namespace: default
-  labels:
-    openchoreo.dev/project: fhir-canvas-explorer
-    openchoreo.dev/environment: development
-spec:
-  owner:
-    projectName: fhir-canvas-explorer
-  environment: development

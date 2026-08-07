@@ -25,30 +25,3 @@ spec:
       docker:
         context: "/"
         filePath: "/Dockerfile"
----
-apiVersion: openchoreo.dev/v1alpha1
-kind: Workload
-metadata:
-  name: explorer-web
-  namespace: default
-spec:
-  owner:
-    projectName: fhir-canvas-explorer
-    componentName: explorer-web
-  endpoints:
-    http:
-      type: HTTP
-      port: 3000
-      visibility: [project]
-  container:
-    image: ghcr.io/prdai-archive/fhir-canvas-explorer-web:latest
-    env:
-      - key: FHIR_ALLOWED_ORIGINS
-        value: http://fhir-server:9090
-      - key: FHIR_MCP_IDLE_TTL_MS
-        value: "300000"
-      - key: OPENAI_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: openai-credentials
-            key: apiKey

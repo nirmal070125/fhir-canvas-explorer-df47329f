@@ -1,18 +1,4 @@
 apiVersion: openchoreo.dev/v1alpha1
-kind: Resource
-metadata:
-  name: fhir-postgres
-  namespace: default
-spec:
-  owner:
-    projectName: fhir-canvas-explorer
-  type:
-    kind: ClusterResourceType
-    name: postgres
-  parameters:
-    database: fhirdb
----
-apiVersion: openchoreo.dev/v1alpha1
 kind: ResourceReleaseBinding
 metadata:
   name: fhir-postgres-development

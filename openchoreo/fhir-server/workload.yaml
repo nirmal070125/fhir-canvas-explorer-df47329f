@@ -1,32 +1,4 @@
 apiVersion: openchoreo.dev/v1alpha1
-kind: Component
-metadata:
-  name: fhir-server
-  namespace: default
-  annotations:
-    openchoreo.dev/display-name: FHIR R4 Server
-    openchoreo.dev/description: Go FHIR R4 server backed by postgres.
-spec:
-  owner:
-    projectName: fhir-canvas-explorer
-  componentType:
-    kind: ClusterComponentType
-    name: deployment/service
-  autoDeploy: true
-  workflow:
-    kind: ClusterWorkflow
-    name: dockerfile-builder
-    parameters:
-      repository:
-        url: "https://github.com/prdai-archive/wso2-fhir-server"
-        revision:
-          branch: "main"
-        appPath: "/"
-      docker:
-        context: "/"
-        filePath: "/Dockerfile"
----
-apiVersion: openchoreo.dev/v1alpha1
 kind: Workload
 metadata:
   name: fhir-server

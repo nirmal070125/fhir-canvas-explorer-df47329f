@@ -36,14 +36,14 @@ traffic that bypasses nginx lands in the shared fail-closed bucket.
 
 ## Layout
 
-| File | Purpose |
+| Directory | Purpose |
 | --- | --- |
-| `project.yaml` | Project + development ProjectReleaseBinding |
-| `explorer-nginx.yaml` | Edge proxy Component + Workload (external endpoint) |
-| `explorer-web.yaml` | Next.js app Component + Workload (project endpoint) |
-| `fhir-server.yaml` | FHIR R4 server Component + Workload (project endpoint) |
-| `postgres.yaml` | Postgres as a platform Resource (ClusterResourceType) |
-| `secrets.yaml` | SecretReference for the OpenAI key |
+| `project/` | Project + development ProjectReleaseBinding |
+| `nginx/` | Edge proxy Component + Workload (external endpoint) |
+| `web/` | Next.js app Component + Workload + OpenAI SecretReference |
+| `fhir-server/` | FHIR R4 server Component + Workload (project endpoint) |
+| `postgres/` | Postgres Resource + development ResourceReleaseBinding |
+| `seed-secrets.sh` | Seeds the OpenBao entries from .env.local / the environment |
 
 ## Prerequisites
 
@@ -61,8 +61,8 @@ evaluation, the OpenChoreo quick-start sets one up on kind) with:
 - the getting-started bundle applied (environments, `default` deployment
   pipeline, `deployment/*` ClusterComponentTypes, `dockerfile-builder`
   ClusterWorkflow, `postgres` ClusterResourceType), and
-- a secret store wired to External Secrets Operator containing the entry named
-  in `secrets.yaml` (`fhir-canvas-explorer-openai-api-key`), and
+- a secret store wired to External Secrets Operator (seed-secrets.sh writes
+  the `fhir-canvas-explorer-openai-api-key` entry), and
 - the control plane installed with `backstage.auth.oidcScope="openid profile
   email groups"` — the chart's default scope omits `groups`, so user tokens
   carry no groups claim, every AuthzRoleBinding match fails, and the portal
@@ -71,12 +71,9 @@ evaluation, the OpenChoreo quick-start sets one up on kind) with:
 ## Applying (development environment)
 
 ```sh
-kubectl apply -f openchoreo/project.yaml
-kubectl apply -f openchoreo/secrets.yaml
-kubectl apply -f openchoreo/postgres.yaml
-kubectl apply -f openchoreo/fhir-server.yaml
-kubectl apply -f openchoreo/explorer-web.yaml
-kubectl apply -f openchoreo/explorer-nginx.yaml
+./openchoreo/seed-secrets.sh
+kubectl apply -f openchoreo/project -f openchoreo/postgres \
+  -f openchoreo/fhir-server -f openchoreo/web -f openchoreo/nginx
 ```
 
 Builds are triggered by creating a `WorkflowRun` per source-built component
