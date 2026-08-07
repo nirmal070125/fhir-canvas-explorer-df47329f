@@ -28,8 +28,11 @@ export function isRateLimited(key: string, limit: number, windowMs: number): boo
   return false;
 }
 
-/** Client key for rate limiting: first hop of x-forwarded-for, else a shared bucket. */
+/**
+ * Client key for rate limiting: the reverse proxy's X-Real-IP, which (unlike the first
+ * X-Forwarded-For hop) the client cannot forge — nginx overwrites it from $remote_addr.
+ * Without the nginx front end everyone shares the "unknown" bucket, which fails closed.
+ */
 export function clientKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  return forwarded?.split(",")[0]?.trim() || "unknown";
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
 }
