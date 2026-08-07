@@ -1,9 +1,13 @@
 FROM oven/bun:1.3.14-alpine AS dependencies
 WORKDIR /app
 COPY package.json bun.lock ./
-# Capped concurrency: bun's default 48 parallel downloads exhaust the rootless
-# build container's network (ConnectionRefused) on in-cluster CI runners.
-RUN bun install --frozen-lockfile --network-concurrency 8
+# In-cluster builds run under user-mode networking (podman/pasta) that drops
+# connections under load; low concurrency plus retries rides it out, and bun's
+# download cache keeps each retry's progress.
+RUN for i in 1 2 3 4 5; do \
+      bun install --frozen-lockfile --network-concurrency 8 && break; \
+      [ "$i" = 5 ] && exit 1; sleep 5; \
+    done
 
 FROM dependencies AS builder
 COPY . .
