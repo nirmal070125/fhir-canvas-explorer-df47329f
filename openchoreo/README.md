@@ -99,12 +99,13 @@ Platform findings from that pass:
   Workloads here and wedges the component controller ("Multiple Workloads
   found"). Until the descriptors are reconciled with that convention, delete
   the generated duplicate and patch the built image into the Workload by hand.
-- The workflow plane's user-mode networking (podman under pasta) cannot
-  sustain `bun install`'s registry traffic — parallel connections get refused
-  and long serial runs exhaust the flow table. Go builds (single HTTP/2
-  connection) are unaffected; fhir-server built in-cluster, while the
-  explorer-web image was built locally and pushed to the workflow-plane
-  registry (`localhost:10082` on the host).
+- The stock `containerfile-build` template runs podman under user-mode
+  networking (pasta), which cannot sustain `bun install`'s registry traffic —
+  parallel connections get refused and serial runs exhaust its flow table
+  (Go builds, one HTTP/2 connection, are unaffected). Fixed by patching the
+  ClusterWorkflowTemplate to `podman build --network=host`, which runs RUN
+  steps in the build pod's own CNI network; all three images then build
+  in-cluster. Worth an upstream issue.
 - Workload edits alone do not recut a ComponentRelease; delete the stale
   release (or change the Component spec) to force a new one.
 - If the host machine's DNS search domain leaks into pods (k3d inherits it)
@@ -116,9 +117,6 @@ Platform findings from that pass:
 
 - [ ] Reconcile hand-authored Workloads with the generate-workload convention
       so in-cluster builds wire images automatically
-- [ ] explorer-web in-cluster build blocked on workflow-plane networking (see
-      above) — needs a platform-side fix or a registry mirror reachable over
-      few connections
 - [ ] Environment promotion (dev → staging) with per-env config overrides
 - [ ] Production DB posture: point the postgres Resource at a managed
       instance; drop `FHIR_CREATE_TABLES`
