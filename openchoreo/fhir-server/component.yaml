@@ -18,7 +18,7 @@ spec:
     name: dockerfile-builder
     parameters:
       repository:
-        url: "https://github.com/prdai-archive/wso2-fhir-server"
+        url: "https://github.com/wso2/fhir-server"
         revision:
           branch: "main"
         appPath: "/"
