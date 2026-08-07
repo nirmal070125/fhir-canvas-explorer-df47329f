@@ -82,9 +82,9 @@ Secrets are injected as env vars, so rotating a value in the store needs a
 pod restart to take effect — `seed-secrets.sh` does this for the OpenAI key.
 
 Builds are triggered by creating a `WorkflowRun` per source-built component
-(or pushing with `autoBuild` + webhook); update `container.image` to the tag
-the run publishes (`v1-<git-sha>`) until generate-workload wires it
-automatically. Promotion to staging/production is done by adding the
+(or pushing with `autoBuild` + webhook); the run wires the published image
+into the component's Workload automatically and autoDeploy rolls it out.
+Promotion to staging/production is done by adding the
 corresponding `ProjectReleaseBinding`s and advancing them.
 
 ## Validation status
@@ -95,11 +95,15 @@ postgres serves 200s with the security headers and SSRF allowlist intact.
 
 Platform findings from that pass:
 
-- The build pipeline's `generate-workload` step emits its own
-  `<component>-workload` resource, which collides with the hand-authored
-  Workloads here and wedges the component controller ("Multiple Workloads
-  found"). Until the descriptors are reconciled with that convention, delete
-  the generated duplicate and patch the built image into the Workload by hand.
+- Workloads must be named `<component>-workload` (they are here): the build
+  pipeline's `generate-workload` step writes exactly that CR, so any other
+  name creates a colliding sibling and wedges the component controller.
+  With no `workload.yaml` descriptor in the source repo, a build updates only
+  `container.image` on the existing Workload (env, endpoints, dependencies
+  preserved) and autoDeploy rolls it out — verified end to end. The
+  checked-in image tags are just the bootstrap values; the pipeline owns the
+  field afterwards. Adding a source-repo descriptor flips ownership: builds
+  then fully replace the Workload from the descriptor.
 - The stock `containerfile-build` template runs podman under user-mode
   networking (pasta), which cannot sustain `bun install`'s registry traffic —
   parallel connections get refused and serial runs exhaust its flow table
@@ -116,8 +120,6 @@ Platform findings from that pass:
 
 ## Remaining work
 
-- [ ] Reconcile hand-authored Workloads with the generate-workload convention
-      so in-cluster builds wire images automatically
 - [ ] Environment promotion (dev → staging) with per-env config overrides
 - [ ] Production DB posture: point the postgres Resource at a managed
       instance; drop `FHIR_CREATE_TABLES`

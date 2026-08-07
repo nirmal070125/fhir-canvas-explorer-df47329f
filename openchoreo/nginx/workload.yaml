@@ -1,7 +1,7 @@
 apiVersion: openchoreo.dev/v1alpha1
 kind: Workload
 metadata:
-  name: explorer-nginx
+  name: explorer-nginx-workload
   namespace: default
 spec:
   owner:

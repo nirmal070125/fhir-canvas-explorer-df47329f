@@ -1,7 +1,7 @@
 apiVersion: openchoreo.dev/v1alpha1
 kind: Workload
 metadata:
-  name: fhir-server
+  name: fhir-server-workload
   namespace: default
 spec:
   owner:
