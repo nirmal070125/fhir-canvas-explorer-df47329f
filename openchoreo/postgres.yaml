@@ -19,7 +19,9 @@ spec:
     name: deployment/service
   autoDeploy: true
   traits:
-    - name: persistent-volume
+    - kind: ClusterTrait
+      name: persistent-volume
+      instanceName: pgdata
       parameters:
         volumeName: pgdata
         mountPath: /var/lib/postgresql/data
