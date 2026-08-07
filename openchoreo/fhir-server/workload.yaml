@@ -22,7 +22,7 @@ spec:
           password: DB_PASSWORD
           database: DB_NAME
   container:
-    image: ghcr.io/prdai-archive/wso2-fhir-server:latest
+    image: host.k3d.internal:10082/default-fhir-canvas-explorer-fhir-server:v1-dc822edf
     env:
       - key: SERVER_PORT
         value: "9090"
