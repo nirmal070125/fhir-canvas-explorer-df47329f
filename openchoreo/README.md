@@ -63,7 +63,11 @@ evaluation, the OpenChoreo quick-start sets one up on kind) with:
   ClusterWorkflow, `persistent-volume` trait), and
 - a secret store wired to External Secrets Operator containing the three
   entries named in `secrets.yaml` (`fhir-canvas-explorer-openai-api-key`,
-  `fhir-canvas-explorer-database-url`, `fhir-canvas-explorer-db-password`).
+  `fhir-canvas-explorer-database-url`, `fhir-canvas-explorer-db-password`), and
+- the control plane installed with `backstage.auth.oidcScope="openid profile
+  email groups"` — the chart's default scope omits `groups`, so user tokens
+  carry no groups claim, every AuthzRoleBinding match fails, and the portal
+  renders zero projects even though the catalog syncs them fine.
 
 ## Applying (development environment)
 
