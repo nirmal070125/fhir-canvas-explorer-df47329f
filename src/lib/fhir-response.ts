@@ -14,7 +14,11 @@ export interface OperationOutcome {
 
 /** Returns the body as an OperationOutcome if it is one, else null. */
 export function getOperationOutcome(body: unknown): OperationOutcome | null {
-  if (body && typeof body === "object" && (body as { resourceType?: string }).resourceType === "OperationOutcome") {
+  if (
+    body &&
+    typeof body === "object" &&
+    (body as { resourceType?: string }).resourceType === "OperationOutcome"
+  ) {
     return body as OperationOutcome;
   }
   return null;

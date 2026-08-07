@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Database, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { loadManifest, loadSampleData, type LoadProgress, type LoadSummary } from "@/lib/sample-data";
+import {
+  loadManifest,
+  loadSampleData,
+  type LoadProgress,
+  type LoadSummary,
+} from "@/lib/sample-data";
 
 interface Props {
   baseUrl: string;
@@ -13,11 +18,30 @@ type State =
   | { kind: "done"; summary: LoadSummary }
   | { kind: "error"; message: string };
 
+const LOADED_STORAGE_PREFIX = "fhir-explorer:sample-data-loaded:";
+
+function loadedStorageKey(baseUrl: string) {
+  return `${LOADED_STORAGE_PREFIX}${baseUrl}`;
+}
+
+function wasSampleDataLoaded(baseUrl: string) {
+  // Guard for SSR: this component renders on the server first, where localStorage doesn't exist.
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem(loadedStorageKey(baseUrl)) === "true";
+}
+
 export function LoadSampleDataButton({ baseUrl }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
-  // Read the patient count from the manifest so the label never goes stale
-  // when the dataset is resized.
+  // Start false and read localStorage after mount — reading it in the initializer
+  // makes the first client render differ from the server HTML (hydration mismatch).
+  const [loaded, setLoaded] = useState(false);
+  // Read the patient count from the manifest so the label never goes stale when the dataset is resized.
   const [patientCount, setPatientCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setState({ kind: "idle" });
+    setLoaded(wasSampleDataLoaded(baseUrl));
+  }, [baseUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,35 +66,54 @@ export function LoadSampleDataButton({ baseUrl }: Props) {
         setState({ kind: "loading", progress }),
       );
       setState({ kind: "done", summary });
+      if (summary.failed === 0) {
+        try {
+          localStorage.setItem(loadedStorageKey(baseUrl), "true");
+        } catch {
+          /* best-effort persistence — storage full or disabled */
+        }
+        setLoaded(true);
+      }
     } catch (e: unknown) {
       setState({ kind: "error", message: e instanceof Error ? e.message : String(e) });
     }
   }
 
   const busy = state.kind === "loading";
+  const disabled = busy || loaded;
+
+  const idleTitle =
+    patientCount != null
+      ? `Seeds ${patientCount} synthetic patients (Synthea) into ${baseUrl}`
+      : `Seeds synthetic patient data (Synthea) into ${baseUrl}`;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Button onClick={run} disabled={busy} variant="outline" size="sm" title={`POST sample bundles to ${baseUrl}`}>
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-        Load sample data
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        onClick={run}
+        disabled={disabled}
+        variant="outline"
+        title={loaded ? "Sample data has already been loaded into this server" : idleTitle}
+      >
+        {busy ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : loaded ? (
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+        ) : (
+          <Database className="h-4 w-4" />
+        )}
+        {loaded ? "Sample data loaded" : "Load sample data"}
       </Button>
-      <StatusLine state={state} patientCount={patientCount} />
+      <StatusLine state={state} loaded={loaded} />
     </div>
   );
 }
 
-function StatusLine({ state, patientCount }: { state: State; patientCount: number | null }) {
-  if (state.kind === "idle") {
-    return (
-      <span className="text-xs text-muted-foreground">
-        {patientCount != null
-          ? `Seeds ${patientCount} synthetic patients (Synthea) into the server above.`
-          : "Seeds synthetic patient data (Synthea) into the server above."}
-      </span>
-    );
-  }
-
+/**
+ * Inline status next to the button. The button itself communicates idle and
+ * fully-loaded states, so this only renders while loading or after a problem.
+ */
+function StatusLine({ state, loaded }: { state: State; loaded: boolean }) {
   if (state.kind === "loading") {
     const { index, total, file, status } = state.progress;
     if (total === 0) {
@@ -84,27 +127,24 @@ function StatusLine({ state, patientCount }: { state: State; patientCount: numbe
     );
   }
 
-  if (state.kind === "done") {
-    const { ok, failed, resources, durationMs } = state.summary;
-    const Icon = failed > 0 ? AlertCircle : CheckCircle2;
-    const color = failed > 0 ? "text-destructive" : "text-primary";
+  if (state.kind === "done" && !loaded) {
+    const { ok, failed } = state.summary;
     return (
-      <span className={`flex items-center gap-1 text-xs ${color}`}>
-        <Icon className="h-4 w-4" />
-        Loaded {ok}/{ok + failed} bundles · {resources} resources · {durationMs}ms
-        {failed > 0 && (
-          <span className="ml-2 text-muted-foreground">
-            ({state.summary.errors[0].message.slice(0, 80)}…)
-          </span>
-        )}
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <AlertCircle className="h-4 w-4" />
+        {ok}/{ok + failed} bundles loaded — {state.summary.errors[0]?.message.slice(0, 80)}
       </span>
     );
   }
 
-  return (
-    <span className="flex items-center gap-1 text-xs text-destructive">
-      <AlertCircle className="h-4 w-4" />
-      {state.message}
-    </span>
-  );
+  if (state.kind === "error") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <AlertCircle className="h-4 w-4" />
+        {state.message}
+      </span>
+    );
+  }
+
+  return null;
 }

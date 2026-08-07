@@ -25,8 +25,8 @@ export interface LoadSummary {
   errors: { file: string; message: string }[];
 }
 
-const MANIFEST_URL = `${import.meta.env.BASE_URL}sample-data/manifest.json`;
-const BUNDLE_BASE = `${import.meta.env.BASE_URL}sample-data/`;
+const MANIFEST_URL = "/sample-data/manifest.json";
+const BUNDLE_BASE = "/sample-data/";
 
 export async function loadManifest(): Promise<SampleManifest> {
   const res = await fetch(MANIFEST_URL);

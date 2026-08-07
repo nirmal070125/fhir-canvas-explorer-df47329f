@@ -29,25 +29,33 @@ describe("fhirFetch URL building", () => {
     const fetchMock = mockFetchOnce("{}", { status: 200 });
     await fhirFetch("/Patient", {}, "https://example.org/fhir/r4");
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock.mock.calls[0][0]).toBe("https://example.org/fhir/r4/Patient");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/fhir?url=https%3A%2F%2Fexample.org%2Ffhir%2Fr4%2FPatient",
+    );
   });
 
   it("strips a trailing slash from the base before joining", async () => {
     const fetchMock = mockFetchOnce("{}");
     await fhirFetch("/Patient", {}, "https://example.org/fhir/r4/");
-    expect(fetchMock.mock.calls[0][0]).toBe("https://example.org/fhir/r4/Patient");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/fhir?url=https%3A%2F%2Fexample.org%2Ffhir%2Fr4%2FPatient",
+    );
   });
 
   it("adds a leading slash when the path is missing one", async () => {
     const fetchMock = mockFetchOnce("{}");
     await fhirFetch("Patient", {}, "https://example.org/fhir/r4");
-    expect(fetchMock.mock.calls[0][0]).toBe("https://example.org/fhir/r4/Patient");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/fhir?url=https%3A%2F%2Fexample.org%2Ffhir%2Fr4%2FPatient",
+    );
   });
 
   it("uses an absolute http(s) path verbatim (for follow-link / paging)", async () => {
     const fetchMock = mockFetchOnce("{}");
     await fhirFetch("https://other.example/fhir/Patient?page=2", {}, "https://example.org/fhir/r4");
-    expect(fetchMock.mock.calls[0][0]).toBe("https://other.example/fhir/Patient?page=2");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/fhir?url=https%3A%2F%2Fother.example%2Ffhir%2FPatient%3Fpage%3D2",
+    );
   });
 });
 
@@ -70,7 +78,11 @@ describe("fhirFetch headers", () => {
     const fetchMock = mockFetchOnce("{}");
     await fhirFetch(
       "/Patient/_search",
-      { method: "POST", body: "name=x", headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+      {
+        method: "POST",
+        body: "name=x",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      },
       "https://example.org/fhir/r4",
     );
     const init = fetchMock.mock.calls[0][1] as RequestInit;
@@ -156,9 +168,9 @@ describe("encodeFhirPathSegment", () => {
 
 describe("fhirFetch scheme guard", () => {
   it("refuses to dereference non-HTTP(S) URLs", async () => {
-    await expect(fhirFetch("javascript:alert(1)", {}, "https://example.org/fhir/r4")).rejects.toThrow(
-      /non-HTTP/i,
-    );
+    await expect(
+      fhirFetch("javascript:alert(1)", {}, "https://example.org/fhir/r4"),
+    ).rejects.toThrow(/non-HTTP/i);
     await expect(fhirFetch("data:text/html,x", {}, "https://example.org/fhir/r4")).rejects.toThrow(
       /non-HTTP/i,
     );
@@ -167,6 +179,8 @@ describe("fhirFetch scheme guard", () => {
   it("still allows absolute http(s) follow-link URLs", async () => {
     const fetchMock = mockFetchOnce("{}");
     await fhirFetch("https://other.example/fhir/Patient?page=2", {}, "https://example.org/fhir/r4");
-    expect(fetchMock.mock.calls[0][0]).toBe("https://other.example/fhir/Patient?page=2");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/fhir?url=https%3A%2F%2Fother.example%2Ffhir%2FPatient%3Fpage%3D2",
+    );
   });
 });

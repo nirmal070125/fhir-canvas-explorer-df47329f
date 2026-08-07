@@ -1,40 +1,20 @@
-import js from "@eslint/js";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTypeScript from "eslint-config-next/typescript";
 import eslintPluginPrettier from "eslint-plugin-prettier/recommended";
-import globals from "globals";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
-import tseslint from "typescript-eslint";
 
-export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+export default defineConfig(
+  ...nextVitals,
+  ...nextTypeScript,
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ["**/*.{ts,tsx}"],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-    },
-    plugins: {
-      "react-hooks": reactHooks,
-      "react-refresh": reactRefresh,
-    },
     rules: {
-      ...reactHooks.configs.recommended.rules,
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "server-only",
-              message:
-                "TanStack Start does not use the Next.js `server-only` package. Rename the module to `*.server.ts` or mark it with `@tanstack/react-start/server-only`.",
-            },
-          ],
-        },
-      ],
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // Matches the pre-existing main config; underscore-prefixed args are common in tests.
       "@typescript-eslint/no-unused-vars": "off",
+      // React Compiler advisories — pre-existing patterns, tracked but not blocking.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/purity": "warn",
     },
   },
   eslintPluginPrettier,
+  globalIgnores([".next/**", "dist/**", "node_modules/**"]),
 );

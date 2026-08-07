@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, Copy, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { JsonView } from "./JsonView";
+import { CodeBlock } from "./CodeBlock";
 import {
   getOperationOutcome,
   issueText,
@@ -65,15 +67,18 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge className={statusColor}>
+      <div className="flex items-center gap-2 text-sm">
+        <Badge className={`shrink-0 ${statusColor}`}>
           {res.method} {res.status}
         </Badge>
-        <span className="text-muted-foreground">{res.durationMs}ms</span>
-        <code className="max-w-full truncate rounded bg-muted px-2 py-0.5 font-mono text-xs">
+        <span className="shrink-0 text-muted-foreground">{res.durationMs}ms</span>
+        <code
+          className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-0.5 font-mono text-xs"
+          title={res.url}
+        >
           {res.url}
         </code>
-        <div className="ml-auto flex gap-1">
+        <div className="flex shrink-0 gap-1">
           <Button
             size="sm"
             variant="outline"
@@ -99,23 +104,70 @@ export function ResponseView({ res }: { res: FhirResponse | null }) {
 
       {outcome && <OperationOutcomeView issues={outcome.issue ?? []} />}
 
-      {Object.keys(res.headers).length > 0 && (
-        <details className="rounded-md border bg-card">
-          <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
-            Headers ({Object.keys(res.headers).length})
-          </summary>
-          <pre className="overflow-auto border-t px-3 py-2 font-mono text-xs">
-            {Object.entries(res.headers)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join("\n")}
-          </pre>
-        </details>
-      )}
+      {Object.keys(res.headers).length > 0 && <HeadersView headers={res.headers} />}
 
-      <pre className="max-h-[600px] overflow-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
-        {pretty}
-      </pre>
+      {typeof res.body === "object" && res.body !== null ? (
+        <JsonView value={res.body} />
+      ) : (
+        <CodeBlock code={pretty} />
+      )}
     </div>
+  );
+}
+
+// Headers worth surfacing without expanding — signals a FHIR user actually acts on.
+const NOTABLE_HEADERS = ["etag", "last-modified", "location", "content-type"];
+
+function HeadersView({ headers }: { headers: Record<string, string> }) {
+  const [copied, setCopied] = useState(false);
+  const entries = Object.entries(headers).sort(([a], [b]) => {
+    const ai = NOTABLE_HEADERS.indexOf(a.toLowerCase());
+    const bi = NOTABLE_HEADERS.indexOf(b.toLowerCase());
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.localeCompare(b);
+  });
+
+  async function copyAll() {
+    try {
+      await navigator.clipboard.writeText(entries.map(([k, v]) => `${k}: ${v}`).join("\n"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  return (
+    <details className="group rounded-md border bg-card">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
+        <span className="transition-transform group-open:rotate-90">▸</span>
+        Headers
+        <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-normal">
+          {entries.length}
+        </Badge>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            void copyAll();
+          }}
+          className="ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-muted hover:text-foreground"
+          aria-label="Copy all headers"
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </summary>
+      <div className="divide-y border-t">
+        {entries.map(([k, v]) => (
+          <div key={k} className="grid grid-cols-[200px_1fr] items-baseline gap-x-4 px-3 py-1.5">
+            <span className="break-all font-mono text-xs font-medium text-sky-700 dark:text-sky-300">
+              {k}
+            </span>
+            <span className="break-all font-mono text-xs text-foreground/90">{v}</span>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -136,10 +188,17 @@ function OperationOutcomeView({ issues }: { issues: OperationOutcomeIssue[] }) {
         {issues.map((issue, i) => (
           <li key={i} className="px-3 py-2 text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className={cn("text-[10px]", SEVERITY_STYLES[issue.severity ?? ""] ?? "bg-muted text-foreground")}>
+              <Badge
+                className={cn(
+                  "text-[10px]",
+                  SEVERITY_STYLES[issue.severity ?? ""] ?? "bg-muted text-foreground",
+                )}
+              >
                 {issue.severity ?? "issue"}
               </Badge>
-              {issue.code && <span className="font-mono text-xs text-muted-foreground">{issue.code}</span>}
+              {issue.code && (
+                <span className="font-mono text-xs text-muted-foreground">{issue.code}</span>
+              )}
             </div>
             {issueText(issue) && <p className="mt-1 text-sm text-foreground">{issueText(issue)}</p>}
           </li>

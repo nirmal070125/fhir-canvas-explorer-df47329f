@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import type { CapabilityStatementLike } from "@/lib/fhir-types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DEFAULT_BASE_URL, getBaseUrl, setBaseUrl, fhirFetch } from "@/lib/fhir-client";
 import { CheckCircle2, XCircle, Loader2, Server } from "lucide-react";
 import { LoadSampleDataButton } from "./LoadSampleDataButton";
+import { RequestHistoryMenu } from "./RequestHistoryMenu";
 
 interface Props {
   baseUrl: string;
@@ -24,7 +26,7 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
     try {
       const res = await fhirFetch("/metadata", {}, url);
       if (res.ok) {
-        const body = res.body as any;
+        const body = res.body as CapabilityStatementLike | undefined;
         setStatus("ok");
         setInfo(
           `FHIR ${body?.fhirVersion ?? "?"} · ${body?.software?.name ?? "server"} · ${res.durationMs}ms`,
@@ -33,9 +35,9 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
         setStatus("fail");
         setInfo(`HTTP ${res.status}`);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setStatus("fail");
-      setInfo(e?.message || "Network error (check CORS / server running)");
+      setInfo((e instanceof Error && e.message) || "Network error (check CORS / server running)");
     }
   }
 
@@ -46,8 +48,7 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
 
   function save() {
     const clean = value.trim().replace(/\/$/, "");
-    // Reject anything that isn't a same-origin path or an http(s) URL
-    // (blocks javascript:, data:, file:, protocol-relative, …).
+    // Reject anything that isn't a same-origin path or an http(s) URL (blocks javascript:, data:, file:, protocol-relative, …).
     if (!setBaseUrl(clean)) {
       setStatus("fail");
       setInfo("Invalid base URL — use a relative path (/fhir/r4) or an http(s) URL");
@@ -59,13 +60,13 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
   return (
     <div className="border-b bg-card">
       <div className="mx-auto max-w-7xl px-4 py-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex items-center gap-2 pr-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 pr-1">
             <Server className="h-5 w-5 text-primary" />
             <span className="font-semibold">FHIR Explorer</span>
           </div>
-          <div className="flex-1 min-w-[280px]">
-            <Label htmlFor="base" className="text-xs text-muted-foreground">
+          <div className="min-w-[260px] flex-1">
+            <Label htmlFor="base" className="sr-only">
               Base URL
             </Label>
             <Input
@@ -73,22 +74,25 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && save()}
-              placeholder={DEFAULT_BASE_URL}
+              placeholder={`Base URL, e.g. ${DEFAULT_BASE_URL}`}
               className="font-mono text-sm"
             />
           </div>
           <Button onClick={save} variant="default">
             Connect
           </Button>
-          <div className="flex items-center gap-2 text-sm">
-            {status === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          <div className="flex h-9 items-center gap-2 rounded-md border bg-muted/30 px-3 text-sm">
+            {status === "checking" && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
             {status === "ok" && <CheckCircle2 className="h-4 w-4 text-primary" />}
             {status === "fail" && <XCircle className="h-4 w-4 text-destructive" />}
-            <span className="text-muted-foreground">{info || "—"}</span>
+            <span className="max-w-[320px] truncate text-muted-foreground">{info || "—"}</span>
           </div>
-        </div>
-        <div className="mt-3 border-t pt-3">
-          <LoadSampleDataButton baseUrl={baseUrl} />
+          <div className="ml-auto flex items-center gap-2">
+            <LoadSampleDataButton baseUrl={baseUrl} />
+            <RequestHistoryMenu />
+          </div>
         </div>
       </div>
     </div>

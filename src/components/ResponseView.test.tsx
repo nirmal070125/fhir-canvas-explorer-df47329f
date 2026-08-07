@@ -31,15 +31,21 @@ describe("ResponseView", () => {
     expect(screen.getByText("https://example.org/fhir/r4/Patient/1")).toBeInTheDocument();
   });
 
-  it("pretty-prints the JSON body", () => {
+  it("renders the JSON body as a highlighted tree", () => {
     render(<ResponseView res={makeResponse()} />);
-    // Pretty-printed JSON spreads the object across lines / indentation.
-    expect(screen.getByText(/"resourceType": "Patient"/)).toBeInTheDocument();
+    // JsonView splits keys and values into separate colored spans.
+    expect(screen.getByText("resourceType")).toBeInTheDocument();
+    expect(screen.getByText('"Patient"')).toBeInTheDocument();
   });
 
   it("renders a collapsible headers section when headers are present", () => {
-    render(<ResponseView res={makeResponse({ headers: { "content-type": "application/fhir+json" } })} />);
-    expect(screen.getByText(/headers \(1\)/i)).toBeInTheDocument();
+    render(
+      <ResponseView res={makeResponse({ headers: { "content-type": "application/fhir+json" } })} />,
+    );
+    // Header count renders as a badge next to the "Headers" summary label.
+    expect(screen.getByText(/^headers$/i)).toBeInTheDocument();
+    expect(screen.getByText("content-type")).toBeInTheDocument();
+    expect(screen.getByText("application/fhir+json")).toBeInTheDocument();
   });
 
   it("copies the response JSON to the clipboard", async () => {
