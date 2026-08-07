@@ -14,7 +14,7 @@ singular `container`, `project`/`external` endpoint visibility).
 internet ── OpenChoreo gateway (Envoy, TLS)
               │
               ▼  visibility: external
-        explorer-nginx      security headers, reverse proxy (deploy/nginx)
+        explorer-nginx      stock nginx, security headers, reverse proxy
               │
               ▼  visibility: project
         explorer-web        Next.js UI + API routes
@@ -100,9 +100,9 @@ Platform findings from that pass:
 - The workflow plane's user-mode networking (podman under pasta) cannot
   sustain `bun install`'s registry traffic — parallel connections get refused
   and long serial runs exhaust the flow table. Go builds (single HTTP/2
-  connection) are unaffected; the fhir-server and nginx images built
-  in-cluster, while the explorer-web image was built locally and pushed to
-  the workflow-plane registry (`localhost:10082` on the host).
+  connection) are unaffected; fhir-server built in-cluster, while the
+  explorer-web image was built locally and pushed to the workflow-plane
+  registry (`localhost:10082` on the host).
 - Workload edits alone do not recut a ComponentRelease; delete the stale
   release (or change the Component spec) to force a new one.
 
@@ -116,4 +116,4 @@ Platform findings from that pass:
 - [ ] Environment promotion (dev → staging) with per-env config overrides
 - [ ] Production DB posture: point the postgres Resource at a managed
       instance; drop `FHIR_CREATE_TABLES`
-- [ ] CSP nonce follow-up from PR #22 applies to `deploy/nginx` config here
+- [ ] CSP nonce follow-up from PR #22 applies to the nginx config here
