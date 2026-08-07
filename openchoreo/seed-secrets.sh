@@ -1,10 +1,21 @@
 #!/bin/bash
-# Seeds the OpenBao entries that secrets.yaml references, from environment
-# variables, then restarts the consuming pods so they pick up the new values.
-# Usage: OPENAI_API_KEY=sk-... ./openchoreo/seed-secrets.sh
+# Seeds the OpenBao entries that secrets.yaml references, then restarts the
+# consuming pods. Values come from the environment, or from .env.local / .env
+# at the repo root (copy .env.example to get started).
+# Usage: ./openchoreo/seed-secrets.sh
 set -euo pipefail
 
-: "${OPENAI_API_KEY:?Set OPENAI_API_KEY in the environment (e.g. export it or prefix the command)}"
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -z "${OPENAI_API_KEY:-}" ]; then
+  for f in "$repo_root/.env.local" "$repo_root/.env"; do
+    if [ -f "$f" ]; then
+      set -a; . "$f"; set +a
+      break
+    fi
+  done
+fi
+
+: "${OPENAI_API_KEY:?Set OPENAI_API_KEY, or fill it in .env.local (see .env.example)}"
 
 kubectl exec -n openbao openbao-0 -- \
   bao kv put secret/fhir-canvas-explorer-openai-api-key value="$OPENAI_API_KEY" >/dev/null
