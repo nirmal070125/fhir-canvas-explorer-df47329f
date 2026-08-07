@@ -13,7 +13,7 @@ spec:
       port: 3000
       visibility: [project]
   container:
-    image: host.k3d.internal:10082/default-fhir-canvas-explorer-explorer-web:v1-db4776c0
+    image: host.k3d.internal:10082/default-fhir-canvas-explorer-explorer-web:v1-4051ab6d
     env:
       - key: FHIR_ALLOWED_ORIGINS
         value: http://fhir-server:9090
