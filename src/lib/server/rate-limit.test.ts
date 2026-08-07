@@ -28,7 +28,9 @@ describe("isRateLimited", () => {
   it("cannot be bypassed by rotating forged X-Forwarded-For values", () => {
     const blocked = Array.from({ length: 50 }, (_, i) =>
       isRateLimited(
-        clientKey(req({ "X-Forwarded-For": `10.0.0.${i}, 203.0.113.9`, "X-Real-IP": "203.0.113.9" })),
+        clientKey(
+          req({ "X-Forwarded-For": `10.0.0.${i}, 203.0.113.9`, "X-Real-IP": "203.0.113.9" }),
+        ),
         10,
         60_000,
       ),
