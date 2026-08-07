@@ -18,7 +18,10 @@ ENV FHIR_MCP_IDLE_TTL_MS=300000
 
 RUN apk add --no-cache ca-certificates libstdc++
 COPY --from=ghcr.io/astral-sh/uv:0.8.14 /uv /uvx /usr/local/bin/
+# UV_PYTHON_INSTALL_DIR must be outside /root or the non-root runtime user
+# cannot execute the interpreter behind the fhir-mcp-server shim.
 RUN UV_TOOL_DIR=/opt/uv-tools UV_TOOL_BIN_DIR=/usr/local/bin \
+    UV_PYTHON_INSTALL_DIR=/opt/uv-python \
     uv tool install fhir-mcp-server==0.10.0
 
 COPY --from=builder /app/public ./public
