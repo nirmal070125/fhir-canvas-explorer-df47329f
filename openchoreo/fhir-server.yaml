@@ -1,6 +1,3 @@
-# Data-access tier: the Go FHIR R4 server from the wso2-fhir-server repo.
-# Project-visible only — reached by explorer-web (proxy + MCP subprocess),
-# never from outside the cell.
 apiVersion: openchoreo.dev/v1alpha1
 kind: Component
 metadata:
@@ -43,23 +40,23 @@ spec:
       type: HTTP
       port: 9090
       visibility: [project]
+  dependencies:
+    resources:
+      - ref: fhir-postgres
+        envBindings:
+          host: DB_HOST
+          port: DB_PORT
+          username: DB_USER
+          password: DB_PASSWORD
+          database: DB_NAME
   container:
-    # Placeholder; the dockerfile-builder WorkflowRun output image replaces it.
     image: ghcr.io/prdai-archive/wso2-fhir-server:latest
     env:
-      # Carries the DB password, so the whole URL lives in the secret.
-      - key: DATABASE_URL
-        valueFrom:
-          secretKeyRef:
-            name: fhir-db-credentials
-            key: databaseUrl
       - key: SERVER_PORT
         value: "9090"
       - key: BASE_URL
         value: http://fhir-server:9090/fhir/r4
       - key: LOG_LEVEL
         value: info
-      # Dev convenience: let the server create its tables on first start. In
-      # production, run DDL out-of-band with a privileged role and drop this.
       - key: FHIR_CREATE_TABLES
         value: "true"

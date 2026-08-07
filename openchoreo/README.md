@@ -24,7 +24,7 @@ internet ── OpenChoreo gateway (Envoy, TLS)
         fhir-server         Go FHIR R4 server (wso2-fhir-server repo)
               │
               ▼  visibility: project
-        fhir-db             postgres 16 + persistent-volume trait
+        fhir-postgres       platform-managed postgres Resource
 ```
 
 Each project maps to a cell (namespace); OpenChoreo generates NetworkPolicies
@@ -42,8 +42,8 @@ traffic that bypasses nginx lands in the shared fail-closed bucket.
 | `explorer-nginx.yaml` | Edge proxy Component + Workload (external endpoint) |
 | `explorer-web.yaml` | Next.js app Component + Workload (project endpoint) |
 | `fhir-server.yaml` | FHIR R4 server Component + Workload (project endpoint) |
-| `postgres.yaml` | Postgres Component (persistent-volume trait) + Workload |
-| `secrets.yaml` | SecretReferences for the OpenAI key and DB credentials |
+| `postgres.yaml` | Postgres as a platform Resource (ClusterResourceType) |
+| `secrets.yaml` | SecretReference for the OpenAI key |
 
 ## Prerequisites
 
@@ -60,10 +60,9 @@ evaluation, the OpenChoreo quick-start sets one up on kind) with:
 
 - the getting-started bundle applied (environments, `default` deployment
   pipeline, `deployment/*` ClusterComponentTypes, `dockerfile-builder`
-  ClusterWorkflow, `persistent-volume` trait), and
-- a secret store wired to External Secrets Operator containing the three
-  entries named in `secrets.yaml` (`fhir-canvas-explorer-openai-api-key`,
-  `fhir-canvas-explorer-database-url`, `fhir-canvas-explorer-db-password`), and
+  ClusterWorkflow, `postgres` ClusterResourceType), and
+- a secret store wired to External Secrets Operator containing the entry named
+  in `secrets.yaml` (`fhir-canvas-explorer-openai-api-key`), and
 - the control plane installed with `backstage.auth.oidcScope="openid profile
   email groups"` — the chart's default scope omits `groups`, so user tokens
   carry no groups claim, every AuthzRoleBinding match fails, and the portal
@@ -115,6 +114,6 @@ Platform findings from that pass:
       above) — needs a platform-side fix or a registry mirror reachable over
       few connections
 - [ ] Environment promotion (dev → staging) with per-env config overrides
-- [ ] Production DB posture: managed postgres or an operator instead of the
-      single-replica trait-backed pod; drop `FHIR_CREATE_TABLES`
+- [ ] Production DB posture: point the postgres Resource at a managed
+      instance; drop `FHIR_CREATE_TABLES`
 - [ ] CSP nonce follow-up from PR #22 applies to `deploy/nginx` config here

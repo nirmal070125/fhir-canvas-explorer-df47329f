@@ -1,54 +1,28 @@
-# Persistence tier: postgres for the FHIR server, from the stock image (no
-# build workflow). Project-visible TCP endpoint; only in-cell components can
-# connect, and only fhir-server holds credentials. Storage comes from the
-# getting-started persistent-volume trait (PVC + deployment patch) since
-# Workload containers have no volumes field of their own.
 apiVersion: openchoreo.dev/v1alpha1
-kind: Component
+kind: Resource
 metadata:
-  name: fhir-db
+  name: fhir-postgres
   namespace: default
-  annotations:
-    openchoreo.dev/display-name: FHIR Database
-    openchoreo.dev/description: Postgres backing store for the FHIR server.
 spec:
   owner:
     projectName: fhir-canvas-explorer
-  componentType:
-    kind: ClusterComponentType
-    name: deployment/service
-  autoDeploy: true
-  traits:
-    - kind: ClusterTrait
-      name: persistent-volume
-      instanceName: pgdata
-      parameters:
-        volumeName: pgdata
-        mountPath: /var/lib/postgresql/data
+  type:
+    kind: ClusterResourceType
+    name: postgres
+  parameters:
+    database: fhirdb
 ---
 apiVersion: openchoreo.dev/v1alpha1
-kind: Workload
+kind: ResourceReleaseBinding
 metadata:
-  name: fhir-db
+  name: fhir-postgres-development
   namespace: default
+  labels:
+    openchoreo.dev/project: fhir-canvas-explorer
+    openchoreo.dev/environment: development
 spec:
   owner:
     projectName: fhir-canvas-explorer
-    componentName: fhir-db
-  endpoints:
-    postgres:
-      type: TCP
-      port: 5432
-      visibility: [project]
-  container:
-    image: postgres:16-alpine
-    env:
-      - key: POSTGRES_DB
-        value: fhirdb
-      - key: POSTGRES_USER
-        value: fhir
-      - key: POSTGRES_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: fhir-db-credentials
-            key: password
+    resourceName: fhir-postgres
+  environment: development
+  # Pin to the current ResourceRelease after the first apply (content-hashed).

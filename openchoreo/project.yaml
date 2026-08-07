@@ -17,9 +17,6 @@ spec:
     kind: ClusterProjectType
     name: default
 ---
-# Binds the project's latest release into the development environment; the
-# controller seeds spec.projectRelease with the newest ProjectRelease, and
-# promotion to later environments is done by advancing sibling bindings.
 apiVersion: openchoreo.dev/v1alpha1
 kind: ProjectReleaseBinding
 metadata:
