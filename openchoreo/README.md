@@ -113,6 +113,11 @@ Platform findings from that pass:
   in-cluster. Worth an upstream issue.
 - Workload edits alone do not recut a ComponentRelease; delete the stale
   release (or change the Component spec) to force a new one.
+- Workload `container.env` is delivered via an envFrom ConfigMap/Secret, while
+  dependency `envBindings` render as explicit container env. Two consequences:
+  an explicit binding shadows a same-named manual env var, and `$(VAR)`
+  references in manual env are never expanded (Kubernetes only expands
+  explicit `env` entries, not envFrom values).
 - If the host machine's DNS search domain leaks into pods (k3d inherits it)
   and that domain wildcard-answers, musl-based images cannot resolve external
   names (the chatbot's OpenAI calls fail with ENOTFOUND); a CoreDNS override
