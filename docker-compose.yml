@@ -5,7 +5,7 @@ services:
       -hf unsloth/Qwen3.5-4B-GGUF:Q4_K_M
       --alias qwen3.5-4b
       --jinja
-      --ctx-size 8192
+      --ctx-size 16384
       --host 0.0.0.0
       --port 8080
     environment:
