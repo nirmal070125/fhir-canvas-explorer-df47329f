@@ -45,6 +45,26 @@ function countResources(bundle: unknown): number {
   return Array.isArray(entries) ? entries.length : 0;
 }
 
+interface BundleEntry {
+  request?: { method?: string };
+  resource?: { id?: string };
+}
+
+/** Strips resource.id from POST entries: the create interaction ignores client
+ * ids, entries reference each other via urn:uuid fullUrls, and servers that do
+ * honor them reject a re-run of the same bundle with duplicate-key errors. */
+export function stripPostResourceIds(bundle: unknown): unknown {
+  if (!bundle || typeof bundle !== "object") return bundle;
+  const entries = (bundle as { entry?: BundleEntry[] }).entry;
+  if (!Array.isArray(entries)) return bundle;
+  for (const entry of entries) {
+    if (entry?.request?.method === "POST" && entry.resource?.id !== undefined) {
+      delete entry.resource.id;
+    }
+  }
+  return bundle;
+}
+
 export async function loadSampleData(
   baseUrl: string,
   onProgress: (p: LoadProgress) => void,
@@ -60,11 +80,11 @@ export async function loadSampleData(
     try {
       const bundleRes = await fetch(`${BUNDLE_BASE}${file}`);
       if (!bundleRes.ok) throw new Error(`Failed to fetch ${file}: HTTP ${bundleRes.status}`);
-      const bundleText = await bundleRes.text();
-      const resourceCount = countResources(JSON.parse(bundleText));
+      const bundle = stripPostResourceIds(await bundleRes.json());
+      const resourceCount = countResources(bundle);
 
       // FHIR transaction bundles are POSTed to the server's base URL.
-      const res = await fhirFetch("/", { method: "POST", body: bundleText }, baseUrl);
+      const res = await fhirFetch("/", { method: "POST", body: JSON.stringify(bundle) }, baseUrl);
       if (!res.ok) {
         throw new Error(`Server returned HTTP ${res.status}: ${res.raw.slice(0, 200)}`);
       }
