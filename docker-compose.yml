@@ -1,13 +1,24 @@
 services:
   llama:
     image: ghcr.io/ggml-org/llama.cpp:server
-    command: >
-      -hf unsloth/Qwen3.5-4B-GGUF:Q4_K_M
-      --alias qwen3.5-4b
-      --jinja
-      --ctx-size 16384
-      --host 0.0.0.0
-      --port 8080
+    command:
+      - -hf
+      - unsloth/Qwen3.5-4B-GGUF:Q4_K_M
+      - --alias
+      - qwen3.5-4b
+      - --jinja
+      - --chat-template-kwargs
+      - '{"enable_thinking":false}'
+      - --reasoning-budget
+      - "0"
+      - --parallel
+      - "1"
+      - --ctx-size
+      - "16384"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
     environment:
       LLAMA_CACHE: /models
     volumes:

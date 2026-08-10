@@ -6,17 +6,16 @@ import { resolveFhirTarget } from "@/lib/server/fhir-target";
 import { clientKey, isRateLimited } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
-// OPENAI_BASE_URL points the OpenAI-compatible client at a local model
-// server (llama.cpp's llama-server); unset, it uses api.openai.com.
+// The chatbot runs against a local OpenAI-compatible model server
+// (llama.cpp's llama-server) addressed by OPENAI_BASE_URL; no API key.
 const openai = createOpenAI({
   baseURL: process.env.OPENAI_BASE_URL?.trim() || undefined,
-  apiKey: process.env.OPENAI_API_KEY?.trim() || "none",
+  apiKey: "none",
 });
 
-// Each request can spend up to 6 LLM tool-loop steps of the operator's
-// OPENAI_API_KEY, so cap requests per client IP.
+// Each request can spend up to 6 LLM tool-loop steps, so cap per client IP.
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60_000;
 
@@ -33,9 +32,9 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.OPENAI_BASE_URL) {
     return Response.json(
-      { error: "The chatbot is not configured. Set OPENAI_API_KEY on the server." },
+      { error: "The chatbot is not configured. Set OPENAI_BASE_URL on the server." },
       { status: 503 },
     );
   }
@@ -68,7 +67,9 @@ export async function POST(request: Request) {
 
     const agent = new ToolLoopAgent({
       id: "fhir-explorer-read-only-agent",
-      model: openai(process.env.OPENAI_MODEL?.trim() || "gpt-5-nano"),
+      // Chat Completions rather than the default Responses API: local
+      // OpenAI-compatible servers (llama.cpp) implement tools only there.
+      model: openai.chat(process.env.OPENAI_MODEL?.trim() || "qwen3.5-4b"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
       instructions: [
