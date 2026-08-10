@@ -3,9 +3,9 @@ services:
     image: ghcr.io/ggml-org/llama.cpp:server
     command:
       - -hf
-      - unsloth/Qwen3.5-2B-GGUF:Q4_K_M
+      - unsloth/Qwen3.5-0.8B-GGUF:Q4_K_M
       - --alias
-      - qwen3.5-2b
+      - qwen3.5-0.8b
       - --jinja
       - --chat-template-kwargs
       - '{"enable_thinking":false}'
@@ -26,7 +26,7 @@ services:
     volumes:
       - llama-cache:/models
     ports:
-      - "8081:8080"
+      - "18081:8080"
     restart: on-failure
 
   db:
@@ -52,7 +52,7 @@ services:
       BASE_URL: http://fhir-server:9090/fhir/r4
       LOG_LEVEL: info
     ports:
-      - "9090:9090"
+      - "18090:9090"
     depends_on:
       db:
         condition: service_healthy
@@ -62,9 +62,9 @@ services:
     build: .
     network_mode: host
     environment:
-      OPENAI_BASE_URL: http://localhost:8081/v1
-      OPENAI_MODEL: qwen3.5-2b
-      FHIR_ALLOWED_ORIGINS: http://localhost:9090
+      OPENAI_BASE_URL: http://localhost:18081/v1
+      OPENAI_MODEL: qwen3.5-0.8b
+      FHIR_ALLOWED_ORIGINS: http://localhost:18090
     depends_on:
       - llama
       - fhir-server

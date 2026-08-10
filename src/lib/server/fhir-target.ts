@@ -15,7 +15,7 @@ import { z } from "zod";
  *    or otherwise non-routable.
  */
 
-const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:9090", "http://127.0.0.1:9090"];
+const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:18090", "http://127.0.0.1:18090"];
 
 function allowedOrigins(): string[] {
   const configured = process.env.FHIR_ALLOWED_ORIGINS?.trim();

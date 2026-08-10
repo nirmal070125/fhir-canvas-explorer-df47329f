@@ -6,7 +6,7 @@ import { resolveFhirTarget } from "@/lib/server/fhir-target";
 import { clientKey, isRateLimited } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 // The chatbot runs against a local OpenAI-compatible model server
 // (llama.cpp's llama-server) addressed by OPENAI_BASE_URL; no API key.
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       id: "fhir-explorer-read-only-agent",
       // Chat Completions rather than the default Responses API: local
       // OpenAI-compatible servers (llama.cpp) implement tools only there.
-      model: openai.chat(process.env.OPENAI_MODEL?.trim() || "qwen3.5-2b"),
+      model: openai.chat(process.env.OPENAI_MODEL?.trim() || "qwen3.5-0.8b"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
       instructions: [
@@ -78,7 +78,8 @@ export async function POST(request: Request) {
         "Use the WSO2 FHIR MCP tools to answer questions about this server.",
         "You may only inspect capabilities, search resources, and read resources.",
         "Never claim to create, update, patch, or delete FHIR data.",
-        "Answer with the fewest tool calls possible; do not call get_capabilities unless the user asks about server capabilities or a search fails.",
+        "When the user asks about resources, immediately call the search tool in your first step; never ask permission to search and never claim you cannot look something up before trying.",
+        "Do not call get_capabilities unless the user asks about server capabilities or a search fails.",
         "To count resources, call search with the _summary=count parameter and read Bundle.total instead of fetching entries.",
         "When listing resources, request small pages (_count=5).",
         "If a broad question would require checking many resource types, ask the user which type to inspect.",

@@ -2,7 +2,7 @@ import { recordRequest } from "./request-history";
 
 // Local docker FHIR server; the BaseUrlBar can override this via localStorage,
 // and absolute http(s) URLs are routed through the /api/fhir proxy (no CORS).
-export const DEFAULT_BASE_URL = "http://localhost:9090/fhir/r4";
+export const DEFAULT_BASE_URL = "http://localhost:18090/fhir/r4";
 
 const STORAGE_KEY = "fhir-explorer:baseUrl";
 
