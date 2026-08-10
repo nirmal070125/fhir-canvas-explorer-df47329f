@@ -1,0 +1,69 @@
+# Self-contained local stack: explorer UI (+ embedded FHIR MCP subprocess),
+# llama.cpp model server, FHIR R4 server, and postgres. CPU-only.
+#   docker compose up -d --build
+# First start downloads the model (~2.7 GB) into the llama-cache volume.
+services:
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command: >
+      -hf unsloth/Qwen3.5-4B-GGUF:Q4_K_M
+      --alias qwen3.5-4b
+      --jinja
+      --ctx-size 8192
+      --host 0.0.0.0
+      --port 8080
+    environment:
+      LLAMA_CACHE: /models
+    volumes:
+      - llama-cache:/models
+    ports:
+      - "8081:8080"
+    restart: on-failure
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fhirdb
+      POSTGRES_USER: fhir
+      POSTGRES_PASSWORD: fhir
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fhir -d fhirdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  fhir-server:
+    build: https://github.com/wso2/fhir-server.git
+    environment:
+      DATABASE_URL: postgres://fhir:fhir@db:5432/fhirdb?sslmode=disable&pool_max_conns=20
+      FHIR_CREATE_TABLES: "true"
+      SERVER_PORT: "9090"
+      BASE_URL: http://fhir-server:9090/fhir/r4
+      LOG_LEVEL: info
+    ports:
+      - "9090:9090"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+
+  # Host networking so "localhost" means the same thing in the browser and in
+  # the container: the UI's default base URL (localhost:9090) then resolves
+  # correctly for the server-side proxy and the MCP subprocess. Linux-only.
+  explorer:
+    build: .
+    network_mode: host
+    environment:
+      OPENAI_BASE_URL: http://localhost:8081/v1
+      OPENAI_MODEL: qwen3.5-4b
+      FHIR_ALLOWED_ORIGINS: http://localhost:9090
+    depends_on:
+      - llama
+      - fhir-server
+    restart: on-failure
+
+volumes:
+  llama-cache:
+  pgdata:

@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { createAgentUIStreamResponse, stepCountIs, ToolLoopAgent, type UIMessage } from "ai";
 import type { FhirChatMessageMetadata } from "@/lib/fhir-chat-types";
 import { acquireReadOnlyFhirMcpClient } from "@/lib/server/fhir-mcp";
@@ -7,6 +7,13 @@ import { clientKey, isRateLimited } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+// OPENAI_BASE_URL points the OpenAI-compatible client at a local model
+// server (llama.cpp's llama-server); unset, it uses api.openai.com.
+const openai = createOpenAI({
+  baseURL: process.env.OPENAI_BASE_URL?.trim() || undefined,
+  apiKey: process.env.OPENAI_API_KEY?.trim() || "none",
+});
 
 // Each request can spend up to 6 LLM tool-loop steps of the operator's
 // OPENAI_API_KEY, so cap requests per client IP.
