@@ -3,9 +3,9 @@ services:
     image: ghcr.io/ggml-org/llama.cpp:server
     command:
       - -hf
-      - unsloth/Qwen3.5-4B-GGUF:Q4_K_M
+      - unsloth/Qwen3.5-2B-GGUF:Q4_K_M
       - --alias
-      - qwen3.5-4b
+      - qwen3.5-2b
       - --jinja
       - --chat-template-kwargs
       - '{"enable_thinking":false}'
@@ -13,6 +13,8 @@ services:
       - "0"
       - --parallel
       - "1"
+      - --cache-reuse
+      - "256"
       - --ctx-size
       - "16384"
       - --host
@@ -61,7 +63,7 @@ services:
     network_mode: host
     environment:
       OPENAI_BASE_URL: http://localhost:8081/v1
-      OPENAI_MODEL: qwen3.5-4b
+      OPENAI_MODEL: qwen3.5-2b
       FHIR_ALLOWED_ORIGINS: http://localhost:9090
     depends_on:
       - llama

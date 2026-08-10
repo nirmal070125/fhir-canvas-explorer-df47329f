@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       id: "fhir-explorer-read-only-agent",
       // Chat Completions rather than the default Responses API: local
       // OpenAI-compatible servers (llama.cpp) implement tools only there.
-      model: openai.chat(process.env.OPENAI_MODEL?.trim() || "qwen3.5-4b"),
+      model: openai.chat(process.env.OPENAI_MODEL?.trim() || "qwen3.5-2b"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
       instructions: [
@@ -78,9 +78,10 @@ export async function POST(request: Request) {
         "Use the WSO2 FHIR MCP tools to answer questions about this server.",
         "You may only inspect capabilities, search resources, and read resources.",
         "Never claim to create, update, patch, or delete FHIR data.",
-        "Call get_capabilities before searching or reading a resource type.",
-        "Do not call get_capabilities for several resource types merely to produce examples or answer a broad question.",
-        "If a broad question would require checking many resource types, explain that capabilities are checked per resource type and ask the user which type to inspect.",
+        "Answer with the fewest tool calls possible; do not call get_capabilities unless the user asks about server capabilities or a search fails.",
+        "To count resources, call search with the _summary=count parameter and read Bundle.total instead of fetching entries.",
+        "When listing resources, request small pages (_count=5).",
+        "If a broad question would require checking many resource types, ask the user which type to inspect.",
         "Write every answer as concise GitHub-flavored Markdown.",
         "Use short headings, lists, tables, links, and inline code when they improve clarity; never wrap the entire answer in a code fence.",
         "Keep normal answers under 120 words unless the user explicitly asks for detail.",
