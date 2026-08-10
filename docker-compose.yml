@@ -45,9 +45,6 @@ services:
         condition: service_healthy
     restart: on-failure
 
-  # Host networking so "localhost" means the same thing in the browser and in
-  # the container: the UI's default base URL (localhost:9090) then resolves
-  # correctly for the server-side proxy and the MCP subprocess. Linux-only.
   explorer:
     build: .
     network_mode: host
