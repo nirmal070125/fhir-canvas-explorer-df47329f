@@ -1,7 +1,3 @@
-# Self-contained local stack: explorer UI (+ embedded FHIR MCP subprocess),
-# llama.cpp model server, FHIR R4 server, and postgres. CPU-only.
-#   docker compose up -d --build
-# First start downloads the model (~2.7 GB) into the llama-cache volume.
 services:
   llama:
     image: ghcr.io/ggml-org/llama.cpp:server
