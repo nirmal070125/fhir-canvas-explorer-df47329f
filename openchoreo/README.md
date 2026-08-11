@@ -33,7 +33,8 @@ endpoint visibility, so only `explorer-nginx` is externally reachable.
 | `web/` | Next.js app Component + Workload (LLM traffic via the AI gateway trait) |
 | `fhir-server/` | FHIR R4 server Component + Workload |
 | `postgres/` | Postgres Resource + development ResourceReleaseBinding |
-| `platform/` | Once-per-data-plane setup: client-address policy, AI gateway (`platform/ai-gateway/`) |
+| `platform/` | Once-per-data-plane setup: client-address policy, route-timeout trait, AI gateway (`platform/ai-gateway/`, upstream module files vendored under `upstream/`) |
+| `setup.sh` | One-shot platform setup (applies everything under `platform/`) |
 | `seed-secrets.sh` | Seeds the OpenBao entries from .env.local / the environment |
 
 ## Prerequisites
@@ -51,10 +52,8 @@ default scope omits `groups`, which leaves the portal empty.
 Platform setup, once per data plane:
 
 ```sh
-kubectl apply -f openchoreo/platform/gateway-client-address-policy.yaml
-./openchoreo/platform/observability/setup.sh   # logs in the portal
-./openchoreo/seed-secrets.sh                   # OpenAI key into OpenBao
-./openchoreo/platform/ai-gateway/setup.sh      # LLM traffic via the AI gateway
+./openchoreo/seed-secrets.sh   # OpenAI key into OpenBao
+./openchoreo/setup.sh          # client-address policy, traits, AI gateway
 ```
 
 Then the app:

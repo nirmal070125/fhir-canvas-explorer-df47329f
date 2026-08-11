@@ -1,29 +1,32 @@
 #!/bin/bash
-# Installs the WSO2 API Platform AI gateway into the data plane and wires the
-# ai-llm-proxy trait so components can route LLM traffic through it.
-# Idempotent; safe to re-run. Requires the OpenAI key in OpenBao
-# (./openchoreo/seed-secrets.sh seeds it).
-# Usage: ./openchoreo/platform/ai-gateway/setup.sh
+# One-shot platform setup for the FHIR Canvas Explorer on an OpenChoreo data
+# plane: gateway client-address policy plus the WSO2 API Platform AI gateway
+# (operator, gateway instance, shared LLM provider, traits). Idempotent.
+# Requires the OpenAI key in OpenBao first: ./openchoreo/seed-secrets.sh
+# Usage: ./openchoreo/setup.sh
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
 ns=openchoreo-data-plane
-module_ref=c365d3ab68dab91c9b0b0780ab908ed1136b1172
+aigw="$here/platform/ai-gateway"
 
+# Trustworthy client addresses at the gateway (rate limiter depends on this).
+kubectl apply -f "$here/platform/gateway-client-address-policy.yaml"
+
+# WSO2 API Platform operator.
 helm upgrade --install api-platform-operator \
   oci://ghcr.io/wso2/api-platform/helm-charts/gateway-operator \
   --version 0.8.0 -n "$ns" \
   --set gatewayApi.installStandardCRDs=false \
   --wait --timeout 10m
 
-# Upstream module files, unmodified and pinned by commit.
-module_url="https://raw.githubusercontent.com/openchoreo/community-modules/$module_ref/ai-gateway-wso2-api-platform"
-kubectl apply -f "$module_url/gateway-configuration.yaml"
-kubectl apply -f "$here/apigateway.yaml"
-kubectl apply -f "$here/rbac.yaml"
+# Gateway runtime config (vendored upstream, see upstream/README.md) + instance.
+kubectl apply -f "$aigw/upstream/gateway-configuration.yaml"
+kubectl apply -f "$aigw/apigateway.yaml"
+kubectl apply -f "$aigw/rbac.yaml"
 
 # Provider credential from OpenBao, then the shared provider.
-kubectl apply -f "$here/provider-auth-external-secret.yaml"
+kubectl apply -f "$aigw/provider-auth-external-secret.yaml"
 kubectl wait externalsecret/openai-provider-auth -n "$ns" --for=condition=Ready --timeout=120s
 
 echo "Waiting for the gateway runtime..."
@@ -31,16 +34,21 @@ until [ -n "$(kubectl get pods -n "$ns" -l app.kubernetes.io/instance=api-platfo
 kubectl wait --for=condition=ready pod \
   -l app.kubernetes.io/instance=api-platform-default-gateway -n "$ns" --timeout=300s
 
-kubectl apply -f "$module_url/llm-provider.yaml"
+kubectl apply -f "$aigw/upstream/llm-provider.yaml"
 
 # Traits, allowed on the service component type. ai-token-cost-control is the
 # one in use (passthrough + cost tracking); ai-llm-proxy stays available.
+kubectl apply -f "$here/platform/http-route-timeout-trait.yaml"
 for trait in ai-llm-proxy ai-token-cost-control; do
-  kubectl apply -f "$module_url/$trait-trait.yaml"
+  kubectl apply -f "$aigw/upstream/$trait-trait.yaml"
   if ! kubectl get clustercomponenttype service -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw "$trait"; then
     kubectl patch clustercomponenttype service --type='json' \
       -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "'"$trait"'", "kind": "ClusterTrait"}}]'
   fi
 done
+if ! kubectl get clustercomponenttype web-application -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw http-route-timeout; then
+  kubectl patch clustercomponenttype web-application --type='json' \
+    -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "http-route-timeout", "kind": "ClusterTrait"}}]'
+fi
 
 echo "Done. Verify: kubectl get llmprovider -n $ns openai-provider"
