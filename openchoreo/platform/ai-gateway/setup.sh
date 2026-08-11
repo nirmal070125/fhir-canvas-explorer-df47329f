@@ -16,8 +16,9 @@ helm upgrade --install api-platform-operator \
   --set gatewayApi.installStandardCRDs=false \
   --wait --timeout 10m
 
-# Gateway runtime config (unmodified upstream, pinned) + gateway instance.
-kubectl apply -f "https://raw.githubusercontent.com/openchoreo/community-modules/$module_ref/ai-gateway-wso2-api-platform/gateway-configuration.yaml"
+# Upstream module files, unmodified and pinned by commit.
+module_url="https://raw.githubusercontent.com/openchoreo/community-modules/$module_ref/ai-gateway-wso2-api-platform"
+kubectl apply -f "$module_url/gateway-configuration.yaml"
 kubectl apply -f "$here/apigateway.yaml"
 kubectl apply -f "$here/rbac.yaml"
 
@@ -30,10 +31,10 @@ until [ -n "$(kubectl get pods -n "$ns" -l app.kubernetes.io/instance=api-platfo
 kubectl wait --for=condition=ready pod \
   -l app.kubernetes.io/instance=api-platform-default-gateway -n "$ns" --timeout=300s
 
-kubectl apply -f "$here/llm-provider.yaml"
+kubectl apply -f "$module_url/llm-provider.yaml"
 
 # Trait, allowed on the service component type.
-kubectl apply -f "$here/ai-llm-proxy-trait.yaml"
+kubectl apply -f "$module_url/ai-llm-proxy-trait.yaml"
 if ! kubectl get clustercomponenttype service -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw ai-llm-proxy; then
   kubectl patch clustercomponenttype service --type='json' \
     -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "ai-llm-proxy", "kind": "ClusterTrait"}}]'

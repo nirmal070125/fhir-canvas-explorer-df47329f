@@ -7,14 +7,14 @@ trait on `explorer-web` injects `OPENAI_BASE_URL` pointing at the in-cluster
 gateway, which forwards to OpenAI with the platform-managed credential. The
 app no longer holds the API key.
 
-Files here are vendored from
-[community-modules@c365d3a](https://github.com/openchoreo/community-modules/tree/c365d3ab68dab91c9b0b0780ab908ed1136b1172/ai-gateway-wso2-api-platform)
-with two deviations, both commented in place:
-
-- `ai-llm-proxy-trait.yaml` appends `/v1` to the injected `OPENAI_BASE_URL`
-  (the AI SDK treats the base URL as including `/v1`).
-- `llm-provider.yaml` also allows `POST /v1/responses` (the AI SDK's default
-  OpenAI API).
+The module files (gateway configuration, LlmProvider, ai-llm-proxy trait) are
+applied verbatim from
+[community-modules@c365d3a](https://github.com/openchoreo/community-modules/tree/c365d3ab68dab91c9b0b0780ab908ed1136b1172/ai-gateway-wso2-api-platform),
+pinned by commit. The path-convention gap is bridged in the app instead: the
+module injects a host-root `OPENAI_BASE_URL` and allowlists
+`/v1/chat/completions`, while the AI SDK expects a `/v1` base and defaults to
+`/responses` — so `src/app/api/chat/route.ts` appends `/v1` when missing and
+pins the chat-completions API via `openai.chat()`.
 
 ## Install (once per data plane)
 

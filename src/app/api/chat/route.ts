@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { createAgentUIStreamResponse, stepCountIs, ToolLoopAgent, type UIMessage } from "ai";
 import type { FhirChatMessageMetadata } from "@/lib/fhir-chat-types";
 import { acquireReadOnlyFhirMcpClient } from "@/lib/server/fhir-mcp";
@@ -12,6 +12,17 @@ export const maxDuration = 60;
 // OPENAI_API_KEY, so cap requests per client IP.
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60_000;
+
+// The AI SDK treats the base URL as including /v1, but gateway integrations
+// (e.g. the OpenChoreo WSO2 AI gateway trait) inject it host-root per the
+// OpenAI wire convention — append /v1 unless it is already present.
+function openAiBaseUrl(): string | undefined {
+  const raw = process.env.OPENAI_BASE_URL?.trim().replace(/\/+$/, "");
+  if (!raw) return undefined;
+  return raw.endsWith("/v1") ? raw : `${raw}/v1`;
+}
+
+const openai = createOpenAI({ baseURL: openAiBaseUrl() });
 
 interface FhirChatRequestBody {
   messages?: UIMessage[];
@@ -61,7 +72,9 @@ export async function POST(request: Request) {
 
     const agent = new ToolLoopAgent({
       id: "fhir-explorer-read-only-agent",
-      model: openai(process.env.OPENAI_MODEL?.trim() || "gpt-5-nano"),
+      // .chat pins the /chat/completions wire API, the one path the upstream
+      // ai-gateway LlmProvider allowlists (the default is /responses).
+      model: openai.chat(process.env.OPENAI_MODEL?.trim() || "gpt-5-nano"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
       instructions: [
