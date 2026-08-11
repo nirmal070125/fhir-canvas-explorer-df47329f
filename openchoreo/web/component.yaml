@@ -15,9 +15,12 @@ spec:
   autoDeploy: true
   # LLM calls go east-west through the WSO2 AI gateway (see platform/ai-gateway):
   # the trait injects OPENAI_BASE_URL and the credential stays at the gateway.
+  # ai-token-cost-control = passthrough (app selects the model) plus per-request
+  # cost tracking; token/budget limits can be added per environment via
+  # ReleaseBinding traitEnvironmentConfigs.
   traits:
     - kind: ClusterTrait
-      name: ai-llm-proxy
+      name: ai-token-cost-control
       instanceName: llm
       parameters:
         providerRef: openai-provider

@@ -33,11 +33,14 @@ kubectl wait --for=condition=ready pod \
 
 kubectl apply -f "$module_url/llm-provider.yaml"
 
-# Trait, allowed on the service component type.
-kubectl apply -f "$module_url/ai-llm-proxy-trait.yaml"
-if ! kubectl get clustercomponenttype service -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw ai-llm-proxy; then
-  kubectl patch clustercomponenttype service --type='json' \
-    -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "ai-llm-proxy", "kind": "ClusterTrait"}}]'
-fi
+# Traits, allowed on the service component type. ai-token-cost-control is the
+# one in use (passthrough + cost tracking); ai-llm-proxy stays available.
+for trait in ai-llm-proxy ai-token-cost-control; do
+  kubectl apply -f "$module_url/$trait-trait.yaml"
+  if ! kubectl get clustercomponenttype service -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw "$trait"; then
+    kubectl patch clustercomponenttype service --type='json' \
+      -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "'"$trait"'", "kind": "ClusterTrait"}}]'
+  fi
+done
 
 echo "Done. Verify: kubectl get llmprovider -n $ns openai-provider"
