@@ -16,11 +16,11 @@ describe("tenantIdFromRequest", () => {
     expect(tenantIdFromRequest(requestWithFingerprint("   "))).toBeNull();
   });
 
-  it("derives a stable hex tenant id from the fingerprint", () => {
+  it("derives a stable base36 tenant id from the fingerprint", () => {
     const a = tenantIdFromRequest(requestWithFingerprint("203.0.113.7Mozilla/5.0"));
     const b = tenantIdFromRequest(requestWithFingerprint("203.0.113.7Mozilla/5.0"));
     expect(a).toBe(b);
-    expect(a).toMatch(/^[0-9a-f]{24}$/);
+    expect(a).toMatch(/^[0-9a-z]{16}$/);
   });
 
   it("derives different tenants for different fingerprints", () => {

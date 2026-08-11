@@ -17,13 +17,16 @@ import { isAllowedOrigin } from "@/lib/server/fhir-target";
  * servers. User-supplied external FHIR servers keep their URL untouched.
  */
 
-const TENANT_ID_LENGTH = 24;
+// Base36 packs ~5.17 bits per char vs hex's 4, so 16 chars keep ~82 bits of
+// the digest while staying within the server's tenant-id charset.
+const TENANT_ID_LENGTH = 16;
 const FINGERPRINT_HEADER = "x-client-fingerprint";
 
 export function tenantIdFromRequest(request: Request): string | null {
   const fingerprint = request.headers.get(FINGERPRINT_HEADER)?.trim();
   if (!fingerprint) return null;
-  return createHash("sha256").update(fingerprint).digest("hex").slice(0, TENANT_ID_LENGTH);
+  const digest = createHash("sha256").update(fingerprint).digest("hex");
+  return BigInt(`0x${digest}`).toString(36).slice(0, TENANT_ID_LENGTH);
 }
 
 export function applyTenantToFhirUrl(targetUrl: string, tenantId: string | null): string {
