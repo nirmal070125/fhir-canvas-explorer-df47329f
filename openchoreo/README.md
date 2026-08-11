@@ -30,10 +30,10 @@ endpoint visibility, so only `explorer-nginx` is externally reachable.
 | --- | --- |
 | `project/` | Project + development ProjectReleaseBinding |
 | `nginx/` | Edge proxy Component + Workload (external endpoint) |
-| `web/` | Next.js app Component + Workload + OpenAI SecretReference |
+| `web/` | Next.js app Component + Workload (LLM traffic via the AI gateway trait) |
 | `fhir-server/` | FHIR R4 server Component + Workload |
 | `postgres/` | Postgres Resource + development ResourceReleaseBinding |
-| `platform/` | Once-per-data-plane gateway client-address policy |
+| `platform/` | Once-per-data-plane setup: client-address policy, AI gateway (`platform/ai-gateway/`) |
 | `seed-secrets.sh` | Seeds the OpenBao entries from .env.local / the environment |
 
 ## Prerequisites
@@ -48,8 +48,18 @@ default scope omits `groups`, which leaves the portal empty.
 
 ## Applying (development)
 
+Platform setup, once per data plane:
+
 ```sh
-./openchoreo/seed-secrets.sh
+kubectl apply -f openchoreo/platform/gateway-client-address-policy.yaml
+./openchoreo/platform/observability/setup.sh   # logs in the portal
+./openchoreo/seed-secrets.sh                   # OpenAI key into OpenBao
+./openchoreo/platform/ai-gateway/setup.sh      # LLM traffic via the AI gateway
+```
+
+Then the app:
+
+```sh
 kubectl apply -f openchoreo/project -f openchoreo/postgres \
   -f openchoreo/fhir-server -f openchoreo/web -f openchoreo/nginx
 ```
@@ -76,6 +86,25 @@ Validated end to end on a manual k3d install (charts 1.2.2). Gotchas hit:
   never expanded.
 - A leaked wildcard-answering DNS search domain breaks name resolution in
   musl images; fix with a CoreDNS NXDOMAIN override.
+- Generated HTTPRoutes carry no timeouts, so Envoy's 15s default cuts off the
+  chat tool loop; the `http-route-timeout` trait (platform/) patches the route
+  to 75s on the nginx component.
+- The WSO2 AI gateway stores its API config in pod-local sqlite: recreating
+  the gateway orphans existing LlmProxies. Delete the component's
+  RenderedRelease to force a re-apply.
+
+Quirks after a k3d cluster restart:
+
+- The quickstart OpenBao runs in dev mode (in-memory): re-run
+  `seed-secrets.sh` after every cluster restart or ExternalSecrets go stale.
+- k3d regenerates CoreDNS NodeHosts without `host.k3d.internal`, which breaks
+  the `*.openchoreo.localhost` rewrite (portal login fails with
+  "Failed to obtain access token"); re-add `<docker network gateway IP>
+  host.k3d.internal` to the `coredns` ConfigMap's NodeHosts and restart
+  CoreDNS.
+- The cluster load balancer binds host port 8080; anything else holding it
+  (e.g. the docker-compose dev stack) leaves the LB crash-looping and the
+  API server unreachable.
 
 ## Remaining work
 

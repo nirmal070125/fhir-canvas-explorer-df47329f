@@ -13,3 +13,11 @@ spec:
     kind: ClusterComponentType
     name: deployment/web-application
   autoDeploy: true
+  # Envoy's 15s default request timeout is too short for the chat tool loop;
+  # nginx already allows 65s, so the edge route must exceed that.
+  traits:
+    - kind: ClusterTrait
+      name: http-route-timeout
+      instanceName: edge
+      parameters:
+        request: "75s"

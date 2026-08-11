@@ -1,0 +1,28 @@
+# ClusterTrait: http-route-timeout
+#
+# Sets Gateway API timeouts on the component's rendered HTTPRoute. Without it
+# Envoy's 15s default request timeout cuts off the chat endpoint, whose
+# MCP-backed tool loop legitimately runs longer (nginx allows 65s).
+apiVersion: openchoreo.dev/v1alpha1
+kind: ClusterTrait
+metadata:
+  name: http-route-timeout
+spec:
+  parameters:
+    openAPIV3Schema:
+      type: object
+      properties:
+        request:
+          type: string
+          default: "75s"
+          description: "Gateway request timeout (Gateway API duration, e.g. 75s)"
+  patches:
+    - target:
+        group: gateway.networking.k8s.io
+        version: v1
+        kind: HTTPRoute
+      operations:
+        - op: add
+          path: /spec/rules/0/timeouts
+          value:
+            request: ${parameters.request}

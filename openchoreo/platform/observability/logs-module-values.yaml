@@ -1,0 +1,27 @@
+# Values for the observability-logs-opensearch community module (Fluent Bit +
+# OpenSearch + logs adapter), single-cluster k3d topology.
+adapter:
+  openSearchSecretName: opensearch-admin-credentials
+openSearchSetup:
+  openSearchSecretName: opensearch-admin-credentials
+# The bundled OpenSearch ships a hardcoded initial admin password; override it
+# at install time to the generated one so the setup job and adapter can auth:
+#   --set openSearch.extraEnvs[0].name=OPENSEARCH_INITIAL_ADMIN_PASSWORD \
+#   --set openSearch.extraEnvs[0].value=<password from the secret>
+# (Applies on first boot only — wiping the opensearch PVC re-initializes it.)
+fluent-bit:
+  enabled: true
+  # k3d node containers have no /etc/machine-id file; drop that default mount.
+  daemonSetVolumes:
+    - name: varlog
+      hostPath:
+        path: /var/log
+    - name: varlibdockercontainers
+      hostPath:
+        path: /var/lib/docker/containers
+  daemonSetVolumeMounts:
+    - name: varlog
+      mountPath: /var/log
+    - name: varlibdockercontainers
+      mountPath: /var/lib/docker/containers
+      readOnly: true

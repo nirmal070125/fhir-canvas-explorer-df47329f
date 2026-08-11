@@ -13,6 +13,14 @@ spec:
     kind: ClusterComponentType
     name: deployment/service
   autoDeploy: true
+  # LLM calls go east-west through the WSO2 AI gateway (see platform/ai-gateway):
+  # the trait injects OPENAI_BASE_URL and the credential stays at the gateway.
+  traits:
+    - kind: ClusterTrait
+      name: ai-llm-proxy
+      instanceName: llm
+      parameters:
+        providerRef: openai-provider
   workflow:
     kind: ClusterWorkflow
     name: dockerfile-builder
