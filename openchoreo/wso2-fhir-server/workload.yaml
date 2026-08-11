@@ -1,16 +1,18 @@
 apiVersion: openchoreo.dev/v1alpha1
 kind: Workload
 metadata:
-  name: fhir-server-workload
+  name: wso2-fhir-server-workload
   namespace: default
 spec:
   owner:
     projectName: fhir-canvas-explorer
-    componentName: fhir-server
+    componentName: wso2-fhir-server
   endpoints:
     http:
       type: HTTP
-      port: 9090
+      # Service listens portless (80); the container keeps 9090.
+      port: 80
+      targetPort: 9090
       visibility: [project]
   dependencies:
     resources:
@@ -27,7 +29,7 @@ spec:
       - key: SERVER_PORT
         value: "9090"
       - key: BASE_URL
-        value: http://fhir-server:9090/fhir/r4
+        value: http://wso2-fhir-server/fhir/r4
       - key: LOG_LEVEL
         value: info
       - key: FHIR_CREATE_TABLES

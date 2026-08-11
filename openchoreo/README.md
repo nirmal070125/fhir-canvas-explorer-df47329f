@@ -15,7 +15,7 @@ internet ── OpenChoreo gateway (Envoy, TLS)
         explorer-web        Next.js UI + API routes (MCP as stdio subprocess)
               │
               ▼  visibility: project
-        fhir-server         Go FHIR R4 server (wso2/fhir-server)
+        wso2-fhir-server    Go FHIR R4 server (wso2/fhir-server), portless Service
               │
               ▼  visibility: project
         fhir-postgres       platform-provisioned postgres
@@ -31,7 +31,7 @@ endpoint visibility, so only `explorer-nginx` is externally reachable.
 | `project/` | Project + development ProjectReleaseBinding |
 | `nginx/` | Edge proxy Component + Workload (external endpoint) |
 | `web/` | Next.js app Component + Workload (LLM traffic via the AI gateway trait) |
-| `fhir-server/` | FHIR R4 server Component + Workload |
+| `wso2-fhir-server/` | FHIR R4 server Component + Workload |
 | `postgres/` | Postgres Resource + development ResourceReleaseBinding |
 | `platform/` | Once-per-data-plane setup: client-address policy, route-timeout trait, AI gateway (`platform/ai-gateway/`, upstream module files vendored under `upstream/`) |
 | `setup.sh` | One-shot platform setup (applies everything under `platform/`) |
@@ -60,7 +60,7 @@ Then the app:
 
 ```sh
 kubectl apply -f openchoreo/project -f openchoreo/postgres \
-  -f openchoreo/fhir-server -f openchoreo/web -f openchoreo/nginx
+  -f openchoreo/wso2-fhir-server -f openchoreo/web -f openchoreo/nginx
 ```
 
 Builds: create a `WorkflowRun` per source-built component; the pipeline wires

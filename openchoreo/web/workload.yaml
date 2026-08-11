@@ -14,7 +14,7 @@ spec:
       visibility: [project]
   dependencies:
     endpoints:
-      - component: fhir-server
+      - component: wso2-fhir-server
         name: http
         visibility: project
         envBindings:
@@ -22,11 +22,14 @@ spec:
   container:
     image: host.k3d.internal:10082/default-fhir-canvas-explorer-explorer-web:v1-a713df8e
     env:
-      # Must stay the short service name: fhir-server's BASE_URL embeds this
-      # origin in pagination links, and $(FHIR_SERVER_ORIGIN) cannot be
+      # Must stay the short service name: wso2-fhir-server's BASE_URL embeds
+      # this origin in pagination links, and $(FHIR_SERVER_ORIGIN) cannot be
       # referenced here — workload env lands in an envFrom ConfigMap, where
       # Kubernetes performs no variable expansion.
       - key: FHIR_ALLOWED_ORIGINS
-        value: http://fhir-server:9090
+        value: http://wso2-fhir-server
+      # Fresh browsers default to this via /api/config.
+      - key: FHIR_DEFAULT_BASE_URL
+        value: http://wso2-fhir-server/fhir/r4
       - key: FHIR_MCP_IDLE_TTL_MS
         value: "300000"

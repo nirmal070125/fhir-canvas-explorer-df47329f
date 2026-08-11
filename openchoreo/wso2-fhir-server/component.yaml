@@ -1,7 +1,7 @@
 apiVersion: openchoreo.dev/v1alpha1
 kind: Component
 metadata:
-  name: fhir-server
+  name: wso2-fhir-server
   namespace: default
   annotations:
     openchoreo.dev/display-name: FHIR R4 Server
