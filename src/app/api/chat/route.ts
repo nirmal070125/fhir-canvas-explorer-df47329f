@@ -70,8 +70,6 @@ export async function POST(request: Request) {
       model: openai.chat(process.env.OPENAI_MODEL?.trim() || "qwen3.5-0.8b"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
-      // Near-zero temperature and a worked example: at small model sizes,
-      // deterministic sampling and behavioral examples beat rule prose.
       temperature: 0.1,
       instructions: [
         "You are the read-only assistant inside a FHIR R4 Explorer.",
