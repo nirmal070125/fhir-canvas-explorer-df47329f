@@ -18,7 +18,6 @@ const REQUEST_HEADERS_TO_REMOVE = [
   "x-forwarded-port",
   "x-forwarded-proto",
   "x-real-ip",
-  // Raw IP + User-Agent; consumed for tenant mapping, never sent upstream.
   "x-client-fingerprint",
 ];
 const RESPONSE_HEADERS_TO_REMOVE = [
