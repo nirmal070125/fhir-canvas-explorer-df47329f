@@ -67,8 +67,6 @@ export async function POST(request: Request) {
 
     const agent = new ToolLoopAgent({
       id: "fhir-explorer-read-only-agent",
-      // Chat Completions rather than the default Responses API: local
-      // OpenAI-compatible servers (llama.cpp) implement tools only there.
       model: openai.chat(process.env.OPENAI_MODEL?.trim() || "qwen3.5-0.8b"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
