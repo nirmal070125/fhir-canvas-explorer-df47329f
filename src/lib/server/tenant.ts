@@ -2,19 +2,11 @@ import { createHash } from "node:crypto";
 import { isAllowedOrigin } from "@/lib/server/fhir-target";
 
 /**
- * Per-user FHIR tenancy (issue #28).
- *
- * nginx stamps every request with X-Client-Fingerprint. The wso2/fhir-server
- * isolates tenants by URL prefix (/t/{tenant}/fhir/r4, enforced with Postgres
- * row-level security), so mapping a user to a tenant is just a path rewrite —
- * no provisioning call exists or is needed.
- *
- * The fingerprint is hashed because the raw value (IP + User-Agent) contains
- * characters outside the server's tenant-id charset and would leak the IP into
- * URLs and logs. Truncated SHA-256 keeps the id opaque and well-formed.
- *
- * Only operator-allowlisted origins are rewritten: those are our deployed
- * servers. User-supplied external FHIR servers keep their URL untouched.
+ * Per-user FHIR tenancy. The nginx-stamped X-Client-Fingerprint is hashed
+ * (raw IP + User-Agent would leak into URLs and break the tenant-id charset)
+ * and allowlisted-origin requests are rewritten to the wso2/fhir-server's
+ * /t/{tenant} prefix, which isolates tenants via Postgres row-level security.
+ * External user-supplied FHIR servers keep their URL untouched.
  */
 
 const TENANT_ID_LENGTH = 24;
