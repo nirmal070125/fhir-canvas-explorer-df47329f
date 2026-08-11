@@ -1,4 +1,5 @@
 import { resolveFhirTarget } from "@/lib/server/fhir-target";
+import { applyTenantToFhirUrl, tenantIdFromRequest } from "@/lib/server/tenant";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,8 @@ const REQUEST_HEADERS_TO_REMOVE = [
   "x-forwarded-port",
   "x-forwarded-proto",
   "x-real-ip",
+  // Raw IP + User-Agent; consumed for tenant mapping, never sent upstream.
+  "x-client-fingerprint",
 ];
 const RESPONSE_HEADERS_TO_REMOVE = [
   "connection",
@@ -54,6 +57,7 @@ const MAX_REDIRECTS = 3;
 async function fetchWithValidatedRedirects(
   targetUrl: string,
   init: { method: string; headers: Headers; body?: ArrayBuffer; signal: AbortSignal },
+  tenantId: string | null,
 ): Promise<Response> {
   let url = targetUrl;
   const headers = new Headers(init.headers);
@@ -64,7 +68,10 @@ async function fetchWithValidatedRedirects(
     if (response.status < 300 || response.status >= 400 || !location) return response;
     if (hop >= MAX_REDIRECTS) throw new Error("Too many redirects from the FHIR server.");
 
-    const next = await resolveFhirTarget(new URL(location, url).toString());
+    const next = applyTenantToFhirUrl(
+      await resolveFhirTarget(new URL(location, url).toString()),
+      tenantId,
+    );
     if (new URL(next).origin !== new URL(url).origin) headers.delete("authorization");
     url = next;
   }
@@ -73,9 +80,11 @@ async function fetchWithValidatedRedirects(
 async function proxyFhirRequest(request: Request): Promise<Response> {
   const requestedUrl = new URL(request.url).searchParams.get("url");
 
+  const tenantId = tenantIdFromRequest(request);
+
   let targetUrl: string;
   try {
-    targetUrl = await resolveFhirTarget(requestedUrl);
+    targetUrl = applyTenantToFhirUrl(await resolveFhirTarget(requestedUrl), tenantId);
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid FHIR URL." },
@@ -85,12 +94,16 @@ async function proxyFhirRequest(request: Request): Promise<Response> {
 
   try {
     const body = BODYLESS_METHODS.has(request.method) ? undefined : await request.arrayBuffer();
-    const response = await fetchWithValidatedRedirects(targetUrl, {
-      method: request.method,
-      headers: forwardedRequestHeaders(request),
-      body,
-      signal: request.signal,
-    });
+    const response = await fetchWithValidatedRedirects(
+      targetUrl,
+      {
+        method: request.method,
+        headers: forwardedRequestHeaders(request),
+        body,
+        signal: request.signal,
+      },
+      tenantId,
+    );
 
     return new Response(response.body, {
       status: response.status,

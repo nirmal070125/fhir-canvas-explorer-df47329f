@@ -3,6 +3,7 @@ import { createAgentUIStreamResponse, stepCountIs, ToolLoopAgent, type UIMessage
 import type { FhirChatMessageMetadata } from "@/lib/fhir-chat-types";
 import { acquireReadOnlyFhirMcpClient } from "@/lib/server/fhir-mcp";
 import { resolveFhirTarget } from "@/lib/server/fhir-target";
+import { applyTenantToFhirUrl, tenantIdFromRequest } from "@/lib/server/tenant";
 import { clientKey, isRateLimited } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
@@ -45,7 +46,12 @@ export async function POST(request: Request) {
   }
   let fhirBaseUrl: string;
   try {
-    fhirBaseUrl = await resolveFhirTarget(body.baseUrl);
+    // Tenant-scoped base URL also keys the MCP client cache, so each user's
+    // chat sessions talk only to their own tenant.
+    fhirBaseUrl = applyTenantToFhirUrl(
+      await resolveFhirTarget(body.baseUrl),
+      tenantIdFromRequest(request),
+    );
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid FHIR base URL." },
