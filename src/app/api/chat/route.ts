@@ -46,8 +46,6 @@ export async function POST(request: Request) {
   }
   let fhirBaseUrl: string;
   try {
-    // Tenant-scoped base URL also keys the MCP client cache, so each user's
-    // chat sessions talk only to their own tenant.
     fhirBaseUrl = applyTenantToFhirUrl(
       await resolveFhirTarget(body.baseUrl),
       tenantIdFromRequest(request),
