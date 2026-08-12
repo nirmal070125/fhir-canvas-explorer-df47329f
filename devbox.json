@@ -6,8 +6,7 @@
     "kubectl@latest",
     "kubernetes-helm@latest",
     "k3d@latest",
-    "jq@latest",
-    "yq-go@latest"
+    "jq@latest"
   ],
   "shell": {
     "init_hook": [

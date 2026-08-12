@@ -1,66 +1,46 @@
 #!/bin/bash
 # One-shot deploy of the FHIR Canvas Explorer on an OpenChoreo data plane:
-# platform setup (client-address policy, WSO2 AI gateway, traits) followed by
-# the application components. Idempotent.
-# Requires the OpenAI key in OpenBao first: ./openchoreo/seed-secrets.sh
+# platform (AI gateway + traits) then the app components. Idempotent.
+# Prereq: ./openchoreo/seed-secrets.sh (OpenAI key into OpenBao).
 # Usage: ./openchoreo/setup.sh
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
-repo_root="$(cd "$here/.." && pwd)"
 ns=openchoreo-data-plane
 aigw="$here/platform/ai-gateway"
-command -v yq >/dev/null || { echo "yq is required (devbox shell provides it)"; exit 1; }
 
-# Trustworthy client addresses at the gateway (rate limiter depends on this).
+# allow_trait <componentType> <trait>: add a trait to a ComponentType allowlist.
+allow_trait() {
+  kubectl get clustercomponenttype "$1" -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw "$2" && return 0
+  kubectl patch clustercomponenttype "$1" --type=json \
+    -p="[{\"op\":\"add\",\"path\":\"/spec/allowedTraits/-\",\"value\":{\"name\":\"$2\",\"kind\":\"ClusterTrait\"}}]"
+}
+
+echo "== Platform: gateway client-address policy =="
 kubectl apply -f "$here/platform/gateway-client-address-policy.yaml"
 
-# WSO2 API Platform operator.
+echo "== Platform: WSO2 API Platform AI gateway =="
 helm upgrade --install api-platform-operator \
   oci://ghcr.io/wso2/api-platform/helm-charts/gateway-operator \
-  --version 0.8.0 -n "$ns" \
-  --set gatewayApi.installStandardCRDs=false \
-  --wait --timeout 10m
-
-# Gateway runtime config (vendored upstream, see ai-gateway/README.md) + instance.
-kubectl apply -f "$aigw/gateway-configuration.yaml"
-kubectl apply -f "$aigw/apigateway.yaml"
-kubectl apply -f "$aigw/rbac.yaml"
-
-# Provider credential from OpenBao, then the shared provider.
+  --version 0.8.0 -n "$ns" --set gatewayApi.installStandardCRDs=false --wait --timeout 10m
+kubectl apply -f "$aigw/gateway-configuration.yaml" -f "$aigw/apigateway.yaml" -f "$aigw/rbac.yaml"
 kubectl apply -f "$aigw/provider-auth-external-secret.yaml"
 kubectl wait externalsecret/openai-provider-auth -n "$ns" --for=condition=Ready --timeout=120s
-
-echo "Waiting for the gateway runtime..."
+echo "   waiting for the gateway runtime..."
 until [ -n "$(kubectl get pods -n "$ns" -l app.kubernetes.io/instance=api-platform-default-gateway -o name 2>/dev/null)" ]; do sleep 5; done
-kubectl wait --for=condition=ready pod \
-  -l app.kubernetes.io/instance=api-platform-default-gateway -n "$ns" --timeout=300s
-
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=api-platform-default-gateway -n "$ns" --timeout=300s
 kubectl apply -f "$aigw/llm-provider.yaml"
 
-# Traits. ai-user-cost-budget is the single LLM trait (gateway passthrough with
-# per-user cost budget); backend-only-ingress whitelists wso2-fhir-server.
-kubectl apply -f "$here/platform/http-route-timeout-trait.yaml"
-kubectl apply -f "$here/platform/backend-only-ingress-trait.yaml"
-kubectl apply -f "$aigw/ai-user-cost-budget-trait.yaml"
-for trait in ai-user-cost-budget backend-only-ingress; do
-  if ! kubectl get clustercomponenttype service -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw "$trait"; then
-    kubectl patch clustercomponenttype service --type='json' \
-      -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "'"$trait"'", "kind": "ClusterTrait"}}]'
-  fi
-done
-if ! kubectl get clustercomponenttype web-application -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw http-route-timeout; then
-  kubectl patch clustercomponenttype web-application --type='json' \
-    -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "http-route-timeout", "kind": "ClusterTrait"}}]'
-fi
+echo "== Platform: traits =="
+kubectl apply -f "$here/platform/http-route-timeout-trait.yaml" \
+  -f "$here/platform/backend-only-ingress-trait.yaml" \
+  -f "$aigw/ai-user-cost-budget-trait.yaml"
+allow_trait service        ai-user-cost-budget
+allow_trait service        backend-only-ingress
+allow_trait web-application http-route-timeout
 
-# --- Application components (development) ---
+echo "== App: components =="
 kubectl apply -f "$here/project" -f "$here/postgres" \
-  -f "$here/wso2-fhir-server" -f "$here/web"
-# The edge nginx config lives in the repo-root nginx.conf; the Workload CR only
-# takes inline content, so inject it at apply time.
-yq ".spec.container.files[0].value = load_str(\"$repo_root/nginx.conf\")" \
-  "$here/nginx/workload.yaml" | kubectl apply -f -
-kubectl apply -f "$here/nginx/component.yaml"
+  -f "$here/wso2-fhir-server" -f "$here/web" -f "$here/nginx"
 
 echo "Done. Verify: kubectl get components,workloads -n default"

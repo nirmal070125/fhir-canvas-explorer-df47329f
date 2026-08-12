@@ -17,13 +17,14 @@ Files in this directory come from two places:
   (Apache 2.0), unmodified — do not edit; to update, re-copy from a newer
   upstream commit and record it here:
   `gateway-configuration.yaml`, `llm-provider.yaml`.
-- **Authored here**, transcribing the module README's inline install steps
-  (`apigateway.yaml`, `rbac.yaml`) or taking its suggested ESO/OpenBao option
-  for the provider credential (`provider-auth-external-secret.yaml`).
+- **Authored here**: the `ai-user-cost-budget` trait
+  (`ai-user-cost-budget-trait.yaml`), the module README's inline install steps
+  (`apigateway.yaml`, `rbac.yaml`), and its suggested ESO/OpenBao option for
+  the provider credential (`provider-auth-external-secret.yaml`).
 
-The path-convention gap is bridged in the app: the module injects a host-root
-`OPENAI_BASE_URL` and allowlists `/v1/chat/completions`, while the AI SDK
-expects a `/v1` base and defaults to `/responses` — so
+The path-convention gap is bridged in the app: the trait injects a host-root
+`OPENAI_BASE_URL` and the provider allowlists `/v1/chat/completions`, while the
+AI SDK expects a `/v1` base and defaults to `/responses` — so
 `src/app/api/chat/route.ts` appends `/v1` when missing and pins the
 chat-completions API via `openai.chat()`.
 
