@@ -40,6 +40,18 @@ spec:
             ""      $scheme;
           }
 
+          # Per-user identity = trustworthy client address + User-Agent. Keys the
+          # rate limiters and is stamped as X-Client-Fingerprint for the app's
+          # per-user tenancy. $client_ip (not $remote_addr, which is the gateway)
+          # is the real user, so all three controls agree on who a user is.
+          limit_req_zone  "$client_ip$http_user_agent" zone=peruser:20m   rate=10r/s;
+          limit_req_zone  "$client_ip$http_user_agent" zone=chat_user:20m rate=6r/m;
+          limit_req_zone  "$client_ip"                 zone=chat_ip:10m   rate=12r/m;
+          limit_conn_zone "$client_ip"                 zone=perip_conn:10m;
+          limit_req_status 429;
+          limit_conn_status 429;
+          limit_req_log_level warn;
+
           server {
             listen       8080;
             server_name  _;
@@ -53,14 +65,36 @@ spec:
             add_header Permissions-Policy "geolocation=(), camera=(), microphone=()" always;
             add_header Content-Security-Policy "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;
 
-            location / {
+            error_page 429 = @rate_limited;
+
+            # Shared upstream wiring, inherited by both locations below.
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $client_ip;
+            proxy_set_header X-Client-Fingerprint "$client_ip$http_user_agent";
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $forwarded_proto;
+            proxy_buffering off;
+            proxy_read_timeout 65s;
+
+            # The chatbot spends LLM tokens, so it gets a tight budget: 6/min per
+            # user, 12/min per IP, at most 3 concurrent streams.
+            location = /api/chat {
+              limit_req  zone=chat_user burst=3 nodelay;
+              limit_req  zone=chat_ip   burst=6 nodelay;
+              limit_conn perip_conn 3;
               proxy_pass http://${EXPLORER_WEB_HOST}:${EXPLORER_WEB_PORT};
-              proxy_http_version 1.1;
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $client_ip;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $forwarded_proto;
-              proxy_buffering off;
-              proxy_read_timeout 65s;
+            }
+
+            # Everything else: generous burst so page loads are not delayed.
+            location / {
+              limit_req zone=peruser burst=30 nodelay;
+              proxy_pass http://${EXPLORER_WEB_HOST}:${EXPLORER_WEB_PORT};
+            }
+
+            location @rate_limited {
+              default_type application/json;
+              add_header Retry-After 60 always;
+              return 429 '{"error":"Too many requests. Try again in a minute."}';
             }
           }
