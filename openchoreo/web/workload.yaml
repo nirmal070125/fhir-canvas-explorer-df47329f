@@ -14,19 +14,20 @@ spec:
       visibility: [project]
   dependencies:
     endpoints:
+      # Declared for the cell diagram edge; the resolved address is unused
+      # (the allowlist below is a literal), so bind it to a throwaway.
       - component: wso2-fhir-server
         name: http
         visibility: project
         envBindings:
-          address: FHIR_SERVER_ORIGIN
+          address: _
   container:
     # Bootstrap only — the build pipeline overwrites this on the first WorkflowRun.
     image: fhir-canvas-explorer/explorer-web:bootstrap
     env:
-      # Must stay the short service name: wso2-fhir-server's BASE_URL embeds
-      # this origin in pagination links, and $(FHIR_SERVER_ORIGIN) cannot be
-      # referenced here — workload env lands in an envFrom ConfigMap, where
-      # Kubernetes performs no variable expansion.
+      # Short service name: wso2-fhir-server's BASE_URL embeds this origin in
+      # pagination links, and workload env lands in an envFrom ConfigMap (no
+      # Kubernetes $(VAR) expansion), so it must be a literal.
       - key: FHIR_ALLOWED_ORIGINS
         value: http://wso2-fhir-server
       # Fresh browsers default to this via /api/config.
