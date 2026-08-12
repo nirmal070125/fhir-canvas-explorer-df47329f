@@ -36,11 +36,13 @@ kubectl wait --for=condition=ready pod \
 
 kubectl apply -f "$aigw/upstream/llm-provider.yaml"
 
-# Traits, allowed on the service component type. ai-token-cost-control is the
-# one in use (passthrough + cost tracking); ai-llm-proxy stays available.
+# Traits. ai-token-cost-control is the LLM trait in use (passthrough + cost
+# tracking); backend-only-ingress whitelists wso2-fhir-server to explorer-web.
 kubectl apply -f "$here/platform/http-route-timeout-trait.yaml"
-for trait in ai-llm-proxy ai-token-cost-control; do
-  kubectl apply -f "$aigw/upstream/$trait-trait.yaml"
+kubectl apply -f "$here/platform/backend-only-ingress-trait.yaml"
+kubectl apply -f "$aigw/upstream/ai-llm-proxy-trait.yaml"
+kubectl apply -f "$aigw/upstream/ai-token-cost-control-trait.yaml"
+for trait in ai-llm-proxy ai-token-cost-control backend-only-ingress; do
   if ! kubectl get clustercomponenttype service -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw "$trait"; then
     kubectl patch clustercomponenttype service --type='json' \
       -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "'"$trait"'", "kind": "ClusterTrait"}}]'

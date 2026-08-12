@@ -22,7 +22,9 @@ internet ── OpenChoreo gateway (Envoy, TLS)
 ```
 
 The project maps to a cell (namespace); NetworkPolicies are generated from
-endpoint visibility, so only `explorer-nginx` is externally reachable.
+endpoint visibility, so only `explorer-nginx` is externally reachable. The
+`backend-only-ingress` trait narrows `wso2-fhir-server` further: only
+`explorer-web` (the app backend) may reach it, not the whole cell.
 
 ## Layout
 
@@ -91,6 +93,11 @@ Validated end to end on a manual k3d install (charts 1.2.2). Gotchas hit:
 - The WSO2 AI gateway stores its API config in pod-local sqlite: recreating
   the gateway orphans existing LlmProxies. Delete the component's
   RenderedRelease to force a re-apply.
+- Trait `patches:` do not stick to the visibility-generated NetworkPolicy
+  (they work on HTTPRoutes), and that policy uses the Service port, not the
+  container port. `backend-only-ingress` therefore `creates:` a second,
+  additive NetworkPolicy pinned to the backend component on the container
+  port; the generated all-pods/Service-port policy is left as a no-op.
 
 Quirks after a k3d cluster restart:
 
