@@ -12,7 +12,7 @@ internet ── OpenChoreo gateway (Envoy, TLS)
               ▼  project
         explorer-web       Next.js UI + API routes (MCP as a stdio subprocess)
               ▼  project
-        wso2-fhir-server   Go FHIR R4 server (wso2/fhir-server), portless Service
+        wso2-fhir-server   Go FHIR R4 server (wso2/fhir-server)
               ▼  project
         fhir-postgres      platform-provisioned postgres
 ```

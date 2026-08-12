@@ -10,8 +10,7 @@ spec:
   endpoints:
     http:
       type: HTTP
-      port: 80
-      targetPort: 9090
+      port: 9090
       visibility: [project]
   dependencies:
     resources:
@@ -29,7 +28,7 @@ spec:
       - key: SERVER_PORT
         value: "9090"
       - key: BASE_URL
-        value: http://wso2-fhir-server/fhir/r4
+        value: http://wso2-fhir-server:9090/fhir/r4
       - key: LOG_LEVEL
         value: info
       - key: FHIR_CREATE_TABLES

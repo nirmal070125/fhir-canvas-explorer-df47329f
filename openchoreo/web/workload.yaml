@@ -29,9 +29,9 @@ spec:
       # pagination links, and workload env lands in an envFrom ConfigMap (no
       # Kubernetes $(VAR) expansion), so it must be a literal.
       - key: FHIR_ALLOWED_ORIGINS
-        value: http://wso2-fhir-server
+        value: http://wso2-fhir-server:9090
       # Fresh browsers default to this via /api/config.
       - key: FHIR_DEFAULT_BASE_URL
-        value: http://wso2-fhir-server/fhir/r4
+        value: http://wso2-fhir-server:9090/fhir/r4
       - key: FHIR_MCP_IDLE_TTL_MS
         value: "300000"
