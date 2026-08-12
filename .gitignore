@@ -38,3 +38,6 @@ dist-ssr
 *.sln
 *.sw?
 tsconfig.tsbuildinfo
+
+# Local docs, not part of the deployment
+.claude/docs/

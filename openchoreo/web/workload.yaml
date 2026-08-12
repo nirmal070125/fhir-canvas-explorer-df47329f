@@ -20,7 +20,8 @@ spec:
         envBindings:
           address: FHIR_SERVER_ORIGIN
   container:
-    image: host.k3d.internal:10082/default-fhir-canvas-explorer-explorer-web:v1-a713df8e
+    # Bootstrap only — the build pipeline overwrites this on the first WorkflowRun.
+    image: fhir-canvas-explorer/explorer-web:bootstrap
     env:
       # Must stay the short service name: wso2-fhir-server's BASE_URL embeds
       # this origin in pagination links, and $(FHIR_SERVER_ORIGIN) cannot be
