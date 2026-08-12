@@ -18,8 +18,8 @@ internet ── OpenChoreo gateway (Envoy, TLS)
 ```
 
 The project is a cell (namespace); NetworkPolicies come from endpoint
-visibility, so only `explorer-nginx` is external. The `backend-only-ingress`
-trait narrows `wso2-fhir-server` to `explorer-web` alone.
+visibility, so only `explorer-nginx` is external. Everything else is
+`project`-visible — reachable within the cell but not outside it.
 
 ## Layout
 
@@ -46,8 +46,8 @@ trait narrows `wso2-fhir-server` to `explorer-web` alone.
 ```
 
 Builds: create a `WorkflowRun` per source-built component; the pipeline wires
-the image into the Workload and autoDeploy rolls it out. Promote to other
-environments by adding per-env release bindings.
+the image into the Workload and autoDeploy rolls it out. This deployment uses
+a single `development` environment.
 
 ## Platform findings
 
@@ -61,9 +61,9 @@ Validated end to end on a manual k3d install (charts 1.2.2):
 - Workload edits alone don't recut a ComponentRelease — delete the stale one.
 - Generated HTTPRoutes carry no timeout (Envoy's 15s cuts off chat) —
   `http-route-timeout` trait.
-- Trait `patches:` don't stick to the visibility-generated NetworkPolicy (they
-  do on HTTPRoutes), and it uses the Service port not the container port — so
-  `backend-only-ingress` `creates:` a second, additive policy instead.
+- Visibility has no finer level than `project` (whole cell); there is no
+  built-in "only component X may call Y" (open epic openchoreo#3122), and
+  dependencies inject env vars without enforcing any NetworkPolicy.
 - AI-gateway policy order: `llm-cost` must be listed after `advanced-ratelimit`
   (the response phase runs in reverse) or cost is never charged.
 
@@ -73,7 +73,6 @@ login fails); the LB needs host port 8080 free.
 
 ## Remaining work
 
-- [ ] Environment promotion (dev → staging) with per-env overrides
 - [ ] Production DB: managed postgres, drop `FHIR_CREATE_TABLES`
 - [ ] Cost counter on `redis` (memory resets on gateway restart)
 - [ ] CSP nonce follow-up from PR #22

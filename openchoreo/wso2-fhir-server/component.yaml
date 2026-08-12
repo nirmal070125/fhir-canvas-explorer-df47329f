@@ -13,15 +13,6 @@ spec:
     kind: ClusterComponentType
     name: deployment/service
   autoDeploy: true
-  # Whitelist the cell NetworkPolicy to explorer-web's backend only, on the
-  # container port; see platform/backend-only-ingress-trait.yaml.
-  traits:
-    - kind: ClusterTrait
-      name: backend-only-ingress
-      instanceName: netpol
-      parameters:
-        fromComponent: explorer-web
-        port: 9090
   workflow:
     kind: ClusterWorkflow
     name: dockerfile-builder

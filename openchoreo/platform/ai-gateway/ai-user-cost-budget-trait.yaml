@@ -1,21 +1,9 @@
-# ClusterTrait: ai-user-cost-budget
-#
-# The single AI-gateway trait for this deployment. Routes a component's LLM
-# traffic east-west through the WSO2 AI gateway and enforces a PER-END-USER
-# spend budget, identified by a request header (the nginx-stamped
-# X-Client-Fingerprint / tenant id the app forwards).
-#
-# It creates one LlmProxy carrying exactly two built-in gateway policies:
-#   - llm-cost          : prices each request into gateway metadata (x-llm-cost).
-#   - advanced-ratelimit: keys a quota by the fingerprint header and charges it
-#                         x-llm-cost per request; returns 429 once a user crosses
-#                         their budget in the window. (We do NOT use the per-
-#                         component token-based / llm-cost-based ratelimit
-#                         policies — those cannot key per user.)
-#
-# Cost/limit are int64 in the gateway and x-llm-cost is a sub-dollar decimal, so
-# both are scaled to nano-dollars (multiplier 1e9): limit = budgetUsd * 1e9.
-# backend: memory (single instance; the counter resets if the gateway restarts).
+# ClusterTrait: ai-user-cost-budget — routes a component's LLM traffic through
+# the WSO2 AI gateway and enforces a per-user spend budget keyed on the
+# forwarded X-Client-Fingerprint. Creates an LlmProxy with two built-in policies:
+# llm-cost (prices each request into x-llm-cost) and advanced-ratelimit (charges
+# x-llm-cost per fingerprint, 429 over budget). Costs run in nano-dollars
+# (limit = budgetUsd * 1e9); memory backend resets on gateway restart.
 apiVersion: openchoreo.dev/v1alpha1
 kind: ClusterTrait
 metadata:
@@ -71,9 +59,7 @@ spec:
           context: /${metadata.environmentName}-${metadata.componentNamespace}-${metadata.componentName}-${trait.instanceName}
           provider:
             id: ${parameters.providerRef}
-          # Order matters: response-phase policies run in reverse, so llm-cost
-          # (listed last) runs first on the way back and writes x-llm-cost
-          # before advanced-ratelimit reads it to charge the quota.
+          # llm-cost is last so it runs first on the response and writes x-llm-cost before advanced-ratelimit charges it.
           policies:
             - name: advanced-ratelimit
               version: v1
