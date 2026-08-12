@@ -9,6 +9,7 @@ import { currentActivity, followUpSuggestions } from "@/components/fhir-chat/cha
 import { ChatHeader } from "@/components/fhir-chat/ChatHeader";
 import { EmptyChat } from "@/components/fhir-chat/EmptyChat";
 import { Button } from "@/components/ui/button";
+import { ChatRateLimitError } from "@/lib/chat-rate-limit";
 import type { FhirChatMessage } from "@/lib/fhir-chat-types";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,15 @@ export function FhirChat({ baseUrl }: FhirChatProps) {
       new DefaultChatTransport({
         api: "/api/chat",
         body: () => ({ baseUrl }),
+        // The transport otherwise swallows the HTTP status; surface the
+        // per-minute 429 as a typed error carrying its Retry-After.
+        fetch: async (input, init) => {
+          const response = await fetch(input, init);
+          if (response.status === 429) {
+            throw new ChatRateLimitError(Number(response.headers.get("Retry-After")) || 60);
+          }
+          return response;
+        },
       }),
     [baseUrl],
   );
@@ -102,6 +112,7 @@ export function FhirChat({ baseUrl }: FhirChatProps) {
             showFollowUps={showFollowUps}
             activity={activity}
             error={error}
+            onClearError={clearError}
             onSelectSuggestion={ask}
           />
         )}

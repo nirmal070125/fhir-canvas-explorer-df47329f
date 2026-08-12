@@ -81,14 +81,21 @@ export function ChatComposer({
   onInputChange,
   onSubmit,
   onStop,
+  sendDisabled = false,
 }: ChatComposerProps) {
   const submit = (
-    <PromptInputSubmit status={status} onStop={onStop} disabled={!input.trim() && !busy} />
+    <PromptInputSubmit
+      status={status}
+      onStop={onStop}
+      disabled={!busy && (sendDisabled || !input.trim())}
+    />
   );
 
   return (
     <PromptInput
-      onSubmit={({ text }) => onSubmit(text)}
+      onSubmit={({ text }) => {
+        if (!sendDisabled) onSubmit(text);
+      }}
       className={cn(
         "rounded-xl bg-background shadow-sm transition-[box-shadow,transform] duration-300 focus-within:shadow-md",
         !compact && "border-primary/30 shadow-md",

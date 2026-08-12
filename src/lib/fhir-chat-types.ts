@@ -18,4 +18,6 @@ export interface ChatComposerProps {
   onInputChange: (value: string) => void;
   onSubmit: (value: string) => void;
   onStop: () => void;
+  // Blocks Send (but not typing) while a rate limit or budget notice is active.
+  sendDisabled?: boolean;
 }

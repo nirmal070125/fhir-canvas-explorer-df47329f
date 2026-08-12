@@ -1,5 +1,12 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { createAgentUIStreamResponse, stepCountIs, ToolLoopAgent, type UIMessage } from "ai";
+import {
+  APICallError,
+  createAgentUIStreamResponse,
+  stepCountIs,
+  ToolLoopAgent,
+  type UIMessage,
+} from "ai";
+import { encodeBudgetError, resetAtFromHeader } from "@/lib/chat-rate-limit";
 import type { FhirChatMessageMetadata } from "@/lib/fhir-chat-types";
 import { acquireReadOnlyFhirMcpClient } from "@/lib/server/fhir-mcp";
 import { resolveFhirTarget } from "@/lib/server/fhir-target";
@@ -122,6 +129,11 @@ export async function POST(request: Request) {
       },
       onFinish: release,
       onError: (error) => {
+        // The gateway rejects with 429 once the user's weekly LLM budget is
+        // spent; encode its reset so the UI can show a persistent notice.
+        if (APICallError.isInstance(error) && error.statusCode === 429) {
+          return encodeBudgetError(resetAtFromHeader(error.responseHeaders?.["x-ratelimit-reset"]));
+        }
         console.error("FHIR chat stream failed:", error instanceof Error ? error.message : error);
         return "The FHIR assistant could not complete this request.";
       },

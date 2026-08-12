@@ -1,8 +1,10 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Clock, Wallet } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatComposer, PoweredBy, SuggestionButtons } from "./ChatComposer";
 import { describeTool, isToolPart } from "./chat-state";
+import { type ChatLimit, parseChatLimit } from "@/lib/chat-rate-limit";
 import {
   Conversation,
   ConversationContent,
@@ -22,6 +24,7 @@ interface ActiveChatProps extends Omit<ChatComposerProps, "compact"> {
   showFollowUps: boolean;
   activity?: string;
   error?: Error;
+  onClearError: () => void;
   onSelectSuggestion: (suggestion: string) => void;
 }
 
@@ -116,8 +119,91 @@ function ChatMessage({ message }: { message: FhirChatMessage }) {
   );
 }
 
-function ChatError({ error }: { error?: Error }) {
+// Ticks toward `until` (epoch ms), firing onExpire once at zero. The callback is
+// held in a ref so an unstable prop can't restart the countdown each render.
+function useCountdown(until: number | null, onExpire: () => void): number {
+  const onExpireRef = useRef(onExpire);
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  });
+  const secondsLeft = () => (until ? Math.max(0, Math.ceil((until - Date.now()) / 1000)) : 0);
+  const [remaining, setRemaining] = useState(secondsLeft);
+
+  useEffect(() => {
+    if (!until) return;
+    setRemaining(secondsLeft());
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+      setRemaining(left);
+      if (left <= 0) {
+        clearInterval(id);
+        onExpireRef.current();
+      }
+    }, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [until]);
+
+  return remaining;
+}
+
+function formatCountdown(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatBudgetReset(resetAt: string | null): string {
+  if (!resetAt) return "Your limit resets at the start of the next window.";
+  const reset = new Date(resetAt);
+  const remainingMs = reset.getTime() - Date.now();
+  if (remainingMs <= 0) return "Your limit should reset shortly.";
+  const days = Math.ceil(remainingMs / 86_400_000);
+  const when = days <= 1 ? "within a day" : `in ${days} days`;
+  const date = reset.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return `Resets ${when} (${date}).`;
+}
+
+// One of three notices: transient per-minute cooldown (with live countdown),
+// the persistent weekly spend budget, or a generic failure.
+function ChatNotice({
+  error,
+  limit,
+  cooldownRemaining,
+}: {
+  error?: Error;
+  limit: ChatLimit | null;
+  cooldownRemaining: number;
+}) {
   if (!error) return null;
+
+  if (limit?.kind === "per-minute") {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400"
+      >
+        <Clock className="mt-0.5 size-4 shrink-0" />
+        <p>
+          You&apos;re sending messages too quickly. You can send again in{" "}
+          <span className="font-medium tabular-nums">{formatCountdown(cooldownRemaining)}</span>.
+        </p>
+      </div>
+    );
+  }
+
+  if (limit?.kind === "weekly-budget") {
+    return (
+      <div
+        role="alert"
+        className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+      >
+        <Wallet className="mt-0.5 size-4 shrink-0" />
+        <p>You&apos;ve reached your AI usage limit for now. {formatBudgetReset(limit.resetAt)}</p>
+      </div>
+    );
+  }
 
   return (
     <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
@@ -134,6 +220,7 @@ export function ActiveChat({
   showFollowUps,
   activity,
   error,
+  onClearError,
   input,
   busy,
   status,
@@ -142,6 +229,15 @@ export function ActiveChat({
   onStop,
   onSelectSuggestion,
 }: ActiveChatProps) {
+  const limit = useMemo(() => parseChatLimit(error), [error]);
+  const cooldownUntil = useMemo(
+    () => (limit?.kind === "per-minute" ? Date.now() + limit.retryAfterSec * 1000 : null),
+    [limit],
+  );
+  const cooldownRemaining = useCountdown(cooldownUntil, onClearError);
+  const blocked =
+    limit?.kind === "weekly-budget" || (limit?.kind === "per-minute" && cooldownRemaining > 0);
+
   return (
     <>
       <Conversation className="min-h-0 animate-in fade-in duration-300 motion-reduce:animate-none">
@@ -150,7 +246,7 @@ export function ActiveChat({
             <ChatMessage key={message.id} message={message} />
           ))}
           {activity && <AssistantActivity label={activity} />}
-          <ChatError error={error} />
+          <ChatNotice error={error} limit={limit} cooldownRemaining={cooldownRemaining} />
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
@@ -174,6 +270,7 @@ export function ActiveChat({
           onInputChange={onInputChange}
           onSubmit={onSubmit}
           onStop={onStop}
+          sendDisabled={blocked}
         />
         <PoweredBy compact />
       </div>
