@@ -71,12 +71,10 @@ spec:
           context: /${metadata.environmentName}-${metadata.componentNamespace}-${metadata.componentName}-${trait.instanceName}
           provider:
             id: ${parameters.providerRef}
+          # Order matters: response-phase policies run in reverse, so llm-cost
+          # (listed last) runs first on the way back and writes x-llm-cost
+          # before advanced-ratelimit reads it to charge the quota.
           policies:
-            - name: llm-cost
-              version: v1
-              paths:
-                - path: ${parameters.apiPath}
-                  methods: [POST]
             - name: advanced-ratelimit
               version: v1
               paths:
@@ -98,6 +96,11 @@ spec:
                             - type: response_metadata
                               key: x-llm-cost
                               multiplier: 1000000000
+            - name: llm-cost
+              version: v1
+              paths:
+                - path: ${parameters.apiPath}
+                  methods: [POST]
   patches:
     - target:
         group: apps
