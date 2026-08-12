@@ -23,7 +23,15 @@ function openAiBaseUrl(): string | undefined {
   return raw.endsWith("/v1") ? raw : `${raw}/v1`;
 }
 
-const openai = createOpenAI({ baseURL: openAiBaseUrl() });
+// The AI gateway's per-user cost budget keys on this header; forwarding the
+// same tenant id the FHIR data isolation uses keeps one identity across data,
+// rate, and spend. Created per-request so the header reflects the caller.
+function openAiFor(tenantId: string | null) {
+  return createOpenAI({
+    baseURL: openAiBaseUrl(),
+    headers: tenantId ? { "x-client-fingerprint": tenantId } : undefined,
+  });
+}
 
 interface FhirChatRequestBody {
   messages?: UIMessage[];
@@ -55,12 +63,10 @@ export async function POST(request: Request) {
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return Response.json({ error: "At least one chat message is required." }, { status: 400 });
   }
+  const tenantId = tenantIdFromRequest(request);
   let fhirBaseUrl: string;
   try {
-    fhirBaseUrl = applyTenantToFhirUrl(
-      await resolveFhirTarget(body.baseUrl),
-      tenantIdFromRequest(request),
-    );
+    fhirBaseUrl = applyTenantToFhirUrl(await resolveFhirTarget(body.baseUrl), tenantId);
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid FHIR base URL." },
@@ -78,7 +84,7 @@ export async function POST(request: Request) {
       id: "fhir-explorer-read-only-agent",
       // .chat pins the /chat/completions wire API, the one path the upstream
       // ai-gateway LlmProvider allowlists (the default is /responses).
-      model: openai.chat(process.env.OPENAI_MODEL?.trim() || "gpt-5-nano"),
+      model: openAiFor(tenantId).chat(process.env.OPENAI_MODEL?.trim() || "gpt-5-nano"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
       instructions: [

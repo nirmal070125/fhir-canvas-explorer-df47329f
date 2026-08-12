@@ -1,0 +1,116 @@
+# ClusterTrait: ai-user-cost-budget
+#
+# The single AI-gateway trait for this deployment. Routes a component's LLM
+# traffic east-west through the WSO2 AI gateway and enforces a PER-END-USER
+# spend budget, identified by a request header (the nginx-stamped
+# X-Client-Fingerprint / tenant id the app forwards).
+#
+# It creates one LlmProxy carrying exactly two built-in gateway policies:
+#   - llm-cost          : prices each request into gateway metadata (x-llm-cost).
+#   - advanced-ratelimit: keys a quota by the fingerprint header and charges it
+#                         x-llm-cost per request; returns 429 once a user crosses
+#                         their budget in the window. (We do NOT use the per-
+#                         component token-based / llm-cost-based ratelimit
+#                         policies — those cannot key per user.)
+#
+# Cost/limit are int64 in the gateway and x-llm-cost is a sub-dollar decimal, so
+# both are scaled to nano-dollars (multiplier 1e9): limit = budgetUsd * 1e9.
+# backend: memory (single instance; the counter resets if the gateway restarts).
+apiVersion: openchoreo.dev/v1alpha1
+kind: ClusterTrait
+metadata:
+  name: ai-user-cost-budget
+spec:
+  parameters:
+    openAPIV3Schema:
+      type: object
+      properties:
+        gatewayRuntimeName:
+          type: string
+          default: "api-platform-default-gateway-gateway-runtime"
+        gatewayRuntimeNamespace:
+          type: string
+          default: "openchoreo-data-plane"
+        gatewayRuntimePort:
+          type: integer
+          default: 8080
+        providerRef:
+          type: string
+          default: "openai-provider"
+          description: "Name of the platform-managed LlmProvider this proxy fronts"
+        apiPath:
+          type: string
+          default: "/v1/chat/completions"
+          description: "OpenAI wire path the policies match"
+        fingerprintHeader:
+          type: string
+          default: "x-client-fingerprint"
+          description: "Request header identifying the end user (the budget key)"
+        budgetUsd:
+          type: number
+          default: 1.5
+          description: "Per-user spend budget in USD per window"
+        window:
+          type: string
+          default: "168h"
+          description: "Budget window as a Go duration (168h = 1 week, 720h = 30 days)"
+  validations:
+    - rule: "${size(parameters.providerRef) > 0}"
+      message: "providerRef must reference a deployed LlmProvider (e.g. openai-provider)"
+  creates:
+    - targetPlane: dataplane
+      template:
+        apiVersion: gateway.api-platform.wso2.com/v1alpha1
+        kind: LlmProxy
+        metadata:
+          name: ${metadata.name}-${trait.instanceName}-llm
+          namespace: ${metadata.namespace}
+        spec:
+          displayName: ${metadata.environmentName}-${metadata.componentName}-${trait.instanceName}
+          version: v1.0
+          context: /${metadata.environmentName}-${metadata.componentNamespace}-${metadata.componentName}-${trait.instanceName}
+          provider:
+            id: ${parameters.providerRef}
+          policies:
+            - name: llm-cost
+              version: v1
+              paths:
+                - path: ${parameters.apiPath}
+                  methods: [POST]
+            - name: advanced-ratelimit
+              version: v1
+              paths:
+                - path: ${parameters.apiPath}
+                  methods: [POST]
+                  params:
+                    backend: memory
+                    quotas:
+                      - limits:
+                          - limit: ${int(parameters.budgetUsd * 1000000000.0)}
+                            duration: ${parameters.window}
+                        keyExtraction:
+                          - type: header
+                            key: ${parameters.fingerprintHeader}
+                        costExtraction:
+                          enabled: true
+                          default: 0
+                          sources:
+                            - type: response_metadata
+                              key: x-llm-cost
+                              multiplier: 1000000000
+  patches:
+    - target:
+        group: apps
+        version: v1
+        kind: Deployment
+      operations:
+        - op: add
+          path: /spec/template/spec/containers/0/env/-
+          value:
+            name: OPENAI_BASE_URL
+            value: "http://${parameters.gatewayRuntimeName}.${parameters.gatewayRuntimeNamespace}:${parameters.gatewayRuntimePort}/${metadata.environmentName}-${metadata.componentNamespace}-${metadata.componentName}-${trait.instanceName}"
+        - op: add
+          path: /spec/template/spec/containers/0/env/-
+          value:
+            name: OPENAI_API_KEY
+            value: "managed-by-gateway"

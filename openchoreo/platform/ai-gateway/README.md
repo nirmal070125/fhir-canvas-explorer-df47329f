@@ -3,10 +3,12 @@
 Routes the chatbot's LLM traffic through the
 [WSO2 API Platform AI gateway module](https://openchoreo.dev/ecosystem/item/wso2-api-platform-ai-gateway/)
 instead of calling OpenAI directly. Traffic is east-west: the
-`ai-token-cost-control` trait on `explorer-web` injects `OPENAI_BASE_URL`
+`ai-user-cost-budget` trait on `explorer-web` injects `OPENAI_BASE_URL`
 pointing at the in-cluster gateway, which forwards to OpenAI with the
-platform-managed credential and tracks per-request cost. The app no longer
-holds the API key.
+platform-managed credential, prices each request, and enforces a per-user
+spend budget. The app no longer holds the API key. The trait is authored here
+(`ai-user-cost-budget-trait.yaml`); it attaches the gateway's built-in
+`llm-cost` and `advanced-ratelimit` policies.
 
 Files in this directory come from two places:
 
@@ -14,8 +16,7 @@ Files in this directory come from two places:
   [community-modules@c365d3a](https://github.com/openchoreo/community-modules/tree/c365d3ab68dab91c9b0b0780ab908ed1136b1172/ai-gateway-wso2-api-platform)
   (Apache 2.0), unmodified — do not edit; to update, re-copy from a newer
   upstream commit and record it here:
-  `gateway-configuration.yaml`, `llm-provider.yaml`,
-  `ai-token-cost-control-trait.yaml`.
+  `gateway-configuration.yaml`, `llm-provider.yaml`.
 - **Authored here**, transcribing the module README's inline install steps
   (`apigateway.yaml`, `rbac.yaml`) or taking its suggested ESO/OpenBao option
   for the provider credential (`provider-auth-external-secret.yaml`).
