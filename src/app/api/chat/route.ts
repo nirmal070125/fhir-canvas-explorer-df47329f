@@ -9,23 +9,18 @@ import { clientKey, isRateLimited } from "@/lib/server/rate-limit";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Each request can spend up to 6 LLM tool-loop steps of the operator's
-// OPENAI_API_KEY, so cap requests per client IP.
+// Cap requests per client IP (each spends up to 6 LLM tool-loop steps).
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60_000;
 
-// The AI SDK treats the base URL as including /v1, but gateway integrations
-// (e.g. the OpenChoreo WSO2 AI gateway trait) inject it host-root per the
-// OpenAI wire convention — append /v1 unless it is already present.
+// The AI SDK wants a /v1 base; the gateway injects it host-root — append /v1.
 function openAiBaseUrl(): string | undefined {
   const raw = process.env.OPENAI_BASE_URL?.trim().replace(/\/+$/, "");
   if (!raw) return undefined;
   return raw.endsWith("/v1") ? raw : `${raw}/v1`;
 }
 
-// The AI gateway's per-user cost budget keys on this header; forwarding the
-// same tenant id the FHIR data isolation uses keeps one identity across data,
-// rate, and spend. Created per-request so the header reflects the caller.
+// Forward the tenant id so the gateway's per-user cost budget keys on it.
 function openAiFor(tenantId: string | null) {
   return createOpenAI({
     baseURL: openAiBaseUrl(),
@@ -82,8 +77,7 @@ export async function POST(request: Request) {
 
     const agent = new ToolLoopAgent({
       id: "fhir-explorer-read-only-agent",
-      // .chat pins the /chat/completions wire API, the one path the upstream
-      // ai-gateway LlmProvider allowlists (the default is /responses).
+      // .chat pins /chat/completions — the path the gateway provider allowlists.
       model: openAiFor(tenantId).chat(process.env.OPENAI_MODEL?.trim() || "gpt-5-nano"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
