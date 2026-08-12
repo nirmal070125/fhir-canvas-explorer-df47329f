@@ -25,3 +25,26 @@ spec:
       docker:
         context: "/"
         filePath: "/Dockerfile"
+---
+# Triggers the initial build so `setup.sh` is end-to-end. Bump -01 to rebuild.
+apiVersion: openchoreo.dev/v1alpha1
+kind: WorkflowRun
+metadata:
+  name: wso2-fhir-server-build-01
+  namespace: default
+  labels:
+    openchoreo.dev/project: fhir-canvas-explorer
+    openchoreo.dev/component: wso2-fhir-server
+spec:
+  workflow:
+    kind: ClusterWorkflow
+    name: dockerfile-builder
+    parameters:
+      repository:
+        url: "https://github.com/wso2/fhir-server"
+        revision:
+          branch: "main"
+        appPath: "/"
+      docker:
+        context: "/"
+        filePath: "/Dockerfile"

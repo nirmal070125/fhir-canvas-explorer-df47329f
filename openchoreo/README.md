@@ -44,8 +44,9 @@ export OPENAI_API_KEY=sk-...   # or put it in the repo-root .env.local
 ./openchoreo/setup.sh          # seed key + platform + all app components
 ```
 
-Builds: create a `WorkflowRun` per source-built component; the pipeline wires
-the image into the Workload and autoDeploy rolls it out. This deployment uses
+Builds: each source-built component ships a `WorkflowRun` (applied by
+`setup.sh`) that builds the image; the pipeline wires it into the Workload and
+autoDeploy rolls it out. Bump the `-01` suffix to rebuild. This deployment uses
 a single `development` environment.
 
 ## Platform findings

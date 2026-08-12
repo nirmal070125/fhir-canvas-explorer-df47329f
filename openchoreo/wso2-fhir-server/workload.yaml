@@ -10,7 +10,6 @@ spec:
   endpoints:
     http:
       type: HTTP
-      # Service listens portless (80); the container keeps 9090.
       port: 80
       targetPort: 9090
       visibility: [project]
