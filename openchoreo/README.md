@@ -35,7 +35,7 @@ endpoint visibility, so only `explorer-nginx` is externally reachable. The
 | `web/` | Next.js app Component + Workload (LLM traffic via the AI gateway trait) |
 | `wso2-fhir-server/` | FHIR R4 server Component + Workload |
 | `postgres/` | Postgres Resource + development ResourceReleaseBinding |
-| `platform/` | Once-per-data-plane setup: client-address policy, route-timeout trait, AI gateway (`platform/ai-gateway/`, upstream module files vendored under `upstream/`) |
+| `platform/` | Once-per-data-plane setup: client-address policy, route-timeout trait, AI gateway (`platform/ai-gateway/`; vendored upstream module files noted in its README) |
 | `setup.sh` | One-shot platform setup (applies everything under `platform/`) |
 | `seed-secrets.sh` | Seeds the OpenBao entries from .env.local / the environment |
 

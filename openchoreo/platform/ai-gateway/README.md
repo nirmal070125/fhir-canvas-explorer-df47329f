@@ -8,12 +8,17 @@ pointing at the in-cluster gateway, which forwards to OpenAI with the
 platform-managed credential and tracks per-request cost. The app no longer
 holds the API key.
 
-The module files we use (gateway configuration, LlmProvider,
-ai-token-cost-control trait) are vendored unmodified under `upstream/` from
-[community-modules@c365d3a](https://github.com/openchoreo/community-modules/tree/c365d3ab68dab91c9b0b0780ab908ed1136b1172/ai-gateway-wso2-api-platform).
-The other files here transcribe the module README's inline install steps
-(`apigateway.yaml`, `rbac.yaml`) or take its suggested ESO/OpenBao option for
-the provider credential (`provider-auth-external-secret.yaml`).
+Files in this directory come from two places:
+
+- **Vendored verbatim** from
+  [community-modules@c365d3a](https://github.com/openchoreo/community-modules/tree/c365d3ab68dab91c9b0b0780ab908ed1136b1172/ai-gateway-wso2-api-platform)
+  (Apache 2.0), unmodified — do not edit; to update, re-copy from a newer
+  upstream commit and record it here:
+  `gateway-configuration.yaml`, `llm-provider.yaml`,
+  `ai-token-cost-control-trait.yaml`.
+- **Authored here**, transcribing the module README's inline install steps
+  (`apigateway.yaml`, `rbac.yaml`) or taking its suggested ESO/OpenBao option
+  for the provider credential (`provider-auth-external-secret.yaml`).
 
 The path-convention gap is bridged in the app: the module injects a host-root
 `OPENAI_BASE_URL` and allowlists `/v1/chat/completions`, while the AI SDK

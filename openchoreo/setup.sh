@@ -20,8 +20,8 @@ helm upgrade --install api-platform-operator \
   --set gatewayApi.installStandardCRDs=false \
   --wait --timeout 10m
 
-# Gateway runtime config (vendored upstream, see upstream/README.md) + instance.
-kubectl apply -f "$aigw/upstream/gateway-configuration.yaml"
+# Gateway runtime config (vendored upstream, see ai-gateway/README.md) + instance.
+kubectl apply -f "$aigw/gateway-configuration.yaml"
 kubectl apply -f "$aigw/apigateway.yaml"
 kubectl apply -f "$aigw/rbac.yaml"
 
@@ -34,13 +34,13 @@ until [ -n "$(kubectl get pods -n "$ns" -l app.kubernetes.io/instance=api-platfo
 kubectl wait --for=condition=ready pod \
   -l app.kubernetes.io/instance=api-platform-default-gateway -n "$ns" --timeout=300s
 
-kubectl apply -f "$aigw/upstream/llm-provider.yaml"
+kubectl apply -f "$aigw/llm-provider.yaml"
 
 # Traits. ai-token-cost-control is the single LLM trait (passthrough + cost
 # tracking); backend-only-ingress whitelists wso2-fhir-server to explorer-web.
 kubectl apply -f "$here/platform/http-route-timeout-trait.yaml"
 kubectl apply -f "$here/platform/backend-only-ingress-trait.yaml"
-kubectl apply -f "$aigw/upstream/ai-token-cost-control-trait.yaml"
+kubectl apply -f "$aigw/ai-token-cost-control-trait.yaml"
 for trait in ai-token-cost-control backend-only-ingress; do
   if ! kubectl get clustercomponenttype service -o jsonpath='{.spec.allowedTraits[*].name}' | grep -qw "$trait"; then
     kubectl patch clustercomponenttype service --type='json' \
