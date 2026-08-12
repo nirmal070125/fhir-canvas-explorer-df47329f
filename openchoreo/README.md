@@ -31,7 +31,7 @@ endpoint visibility, so only `explorer-nginx` is externally reachable. The
 | Directory | Purpose |
 | --- | --- |
 | `project/` | Project + development ProjectReleaseBinding |
-| `nginx/` | Edge proxy Component + Workload (external endpoint) |
+| `nginx/` | Edge proxy Component + Workload; config in repo-root `nginx.conf`, injected at apply time |
 | `web/` | Next.js app Component + Workload (LLM traffic via the AI gateway trait) |
 | `wso2-fhir-server/` | FHIR R4 server Component + Workload |
 | `postgres/` | Postgres Resource + development ResourceReleaseBinding |
@@ -62,7 +62,13 @@ Then the app:
 
 ```sh
 kubectl apply -f openchoreo/project -f openchoreo/postgres \
-  -f openchoreo/wso2-fhir-server -f openchoreo/web -f openchoreo/nginx
+  -f openchoreo/wso2-fhir-server -f openchoreo/web
+
+# nginx config lives in the repo-root nginx.conf (a real editable file); the
+# Workload CR only takes inline content, so inject it at apply time:
+yq '.spec.container.files[0].value = load_str("nginx.conf")' \
+  openchoreo/nginx/workload.yaml | kubectl apply -f -
+kubectl apply -f openchoreo/nginx/component.yaml
 ```
 
 Builds: create a `WorkflowRun` per source-built component; the pipeline wires
