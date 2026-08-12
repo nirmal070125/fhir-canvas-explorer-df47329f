@@ -29,7 +29,6 @@ visibility, so only `explorer-nginx` is external. Everything else is
 | `nginx/` `web/` `wso2-fhir-server/` | App Components + Workloads |
 | `platform/` | Cluster traits + AI gateway (`platform/ai-gateway/`) |
 | `setup.sh` | One-shot deploy: platform + app |
-| `seed-secrets.sh` | Seeds the OpenAI key into OpenBao |
 
 ## Prerequisites
 
@@ -41,8 +40,8 @@ visibility, so only `explorer-nginx` is external. Everything else is
 ## Deploy (development)
 
 ```sh
-./openchoreo/seed-secrets.sh   # OpenAI key into OpenBao
-./openchoreo/setup.sh          # platform + all app components
+export OPENAI_API_KEY=sk-...   # or put it in the repo-root .env.local
+./openchoreo/setup.sh          # seed key + platform + all app components
 ```
 
 Builds: create a `WorkflowRun` per source-built component; the pipeline wires
@@ -67,7 +66,7 @@ Validated end to end on a manual k3d install (charts 1.2.2):
 - AI-gateway policy order: `llm-cost` must be listed after `advanced-ratelimit`
   (the response phase runs in reverse) or cost is never charged.
 
-k3d restart quirks: dev-mode OpenBao is in-memory (re-run `seed-secrets.sh`);
+k3d restart quirks: dev-mode OpenBao is in-memory (re-run `setup.sh`);
 CoreDNS drops `host.k3d.internal`, breaking `*.openchoreo.localhost` (portal
 login fails); the LB needs host port 8080 free.
 

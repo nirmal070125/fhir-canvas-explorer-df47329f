@@ -31,7 +31,7 @@ chat-completions API via `openai.chat()`.
 ## Install (once per data plane)
 
 ```sh
-./openchoreo/seed-secrets.sh   # OpenAI key into OpenBao first
+export OPENAI_API_KEY=sk-...   # or put it in the repo-root .env.local
 ./openchoreo/setup.sh          # idempotent; installs everything here
 ```
 
