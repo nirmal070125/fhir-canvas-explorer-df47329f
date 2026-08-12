@@ -66,6 +66,10 @@ Validated end to end on a manual k3d install (charts 1.2.2):
   dependencies inject env vars without enforcing any NetworkPolicy.
 - AI-gateway policy order: `llm-cost` must be listed after `advanced-ratelimit`
   (the response phase runs in reverse) or cost is never charged.
+- `regex-guardrail` is an allowlist by default (blocks when the pattern does *not*
+  match); set `invert: true` to use it as a denylist. It also JSON-unescapes `\b`
+  to a backspace, so patterns must avoid backslashes (`[^a-z]` for word bounds).
+  Guardrail blocks return HTTP 422, not the documented 446.
 
 k3d restart quirks: dev-mode OpenBao is in-memory (re-run `setup.sh`);
 CoreDNS drops `host.k3d.internal`, breaking `*.openchoreo.localhost` (portal
