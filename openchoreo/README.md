@@ -51,24 +51,19 @@ default scope omits `groups`, which leaves the portal empty.
 
 ## Applying (development)
 
-Platform setup, once per data plane:
-
 ```sh
 ./openchoreo/seed-secrets.sh   # OpenAI key into OpenBao
-./openchoreo/setup.sh          # client-address policy, traits, AI gateway
+./openchoreo/setup.sh          # platform (AI gateway, traits) + all app components
 ```
 
-Then the app:
+`setup.sh` deploys everything. The one non-uniform step it handles: the edge
+nginx config lives in the repo-root `nginx.conf` (a real editable file), and
+since the Workload CR only takes inline content, the script injects it with a
+one-line `yq` render before applying. To apply nginx by hand:
 
 ```sh
-kubectl apply -f openchoreo/project -f openchoreo/postgres \
-  -f openchoreo/wso2-fhir-server -f openchoreo/web
-
-# nginx config lives in the repo-root nginx.conf (a real editable file); the
-# Workload CR only takes inline content, so inject it at apply time:
 yq '.spec.container.files[0].value = load_str("nginx.conf")' \
   openchoreo/nginx/workload.yaml | kubectl apply -f -
-kubectl apply -f openchoreo/nginx/component.yaml
 ```
 
 Builds: create a `WorkflowRun` per source-built component; the pipeline wires

@@ -1,14 +1,16 @@
 #!/bin/bash
-# One-shot platform setup for the FHIR Canvas Explorer on an OpenChoreo data
-# plane: gateway client-address policy plus the WSO2 API Platform AI gateway
-# (operator, gateway instance, shared LLM provider, traits). Idempotent.
+# One-shot deploy of the FHIR Canvas Explorer on an OpenChoreo data plane:
+# platform setup (client-address policy, WSO2 AI gateway, traits) followed by
+# the application components. Idempotent.
 # Requires the OpenAI key in OpenBao first: ./openchoreo/seed-secrets.sh
 # Usage: ./openchoreo/setup.sh
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
+repo_root="$(cd "$here/.." && pwd)"
 ns=openchoreo-data-plane
 aigw="$here/platform/ai-gateway"
+command -v yq >/dev/null || { echo "yq is required (devbox shell provides it)"; exit 1; }
 
 # Trustworthy client addresses at the gateway (rate limiter depends on this).
 kubectl apply -f "$here/platform/gateway-client-address-policy.yaml"
@@ -52,4 +54,13 @@ if ! kubectl get clustercomponenttype web-application -o jsonpath='{.spec.allowe
     -p='[{"op": "add", "path": "/spec/allowedTraits/-", "value": {"name": "http-route-timeout", "kind": "ClusterTrait"}}]'
 fi
 
-echo "Done. Verify: kubectl get llmprovider -n $ns openai-provider"
+# --- Application components (development) ---
+kubectl apply -f "$here/project" -f "$here/postgres" \
+  -f "$here/wso2-fhir-server" -f "$here/web"
+# The edge nginx config lives in the repo-root nginx.conf; the Workload CR only
+# takes inline content, so inject it at apply time.
+yq ".spec.container.files[0].value = load_str(\"$repo_root/nginx.conf\")" \
+  "$here/nginx/workload.yaml" | kubectl apply -f -
+kubectl apply -f "$here/nginx/component.yaml"
+
+echo "Done. Verify: kubectl get components,workloads -n default"
