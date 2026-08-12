@@ -1,22 +1,8 @@
-# Shared, platform-managed LLM provider for the WSO2 API Platform AI gateway.
-#
-# Created ONCE by a platform engineer (not per component). It holds the upstream
-# LLM endpoint, the credential, and access control. Per-component LlmProxy
-# resources (created by the `ai-model-routing` trait) reference it by name via
-# the trait's `providerRef` parameter (default: openai-provider).
-#
-# `template: openai` is a built-in LlmProviderTemplate auto-loaded by the
-# gateway. Other built-ins: anthropic, gemini, mistralai, azure-openai,
-# azureai-foundry, awsbedrock.
-#
-# Credential: this sample sources the API key from a Kubernetes Secret in the
-# data-plane namespace. Create it first, e.g.:
-#
-#   kubectl create secret generic openai-provider-auth \
-#     -n openchoreo-data-plane \
-#     --from-literal=authorization="Bearer sk-..."
-#
-# Or provision it with External Secrets Operator / OpenBao instead of a literal.
+# Shared LLM provider (created once): upstream endpoint, credential, and access
+# control. The ai-user-cost-budget trait's LlmProxies reference it by name
+# (providerRef). Credential comes from the openai-provider-auth Secret, which
+# provider-auth-external-secret.yaml builds from OpenBao. template: openai is a
+# gateway built-in (others: anthropic, gemini, mistralai, azure-openai, …).
 ---
 apiVersion: gateway.api-platform.wso2.com/v1alpha1
 kind: LlmProvider
@@ -35,8 +21,7 @@ spec:
         methods: [POST]
       - path: /v1/models
         methods: [GET]
-  # Host root (NOT .../v1): OpenAI-compatible clients send the full wire path
-  # /v1/chat/completions, so the upstream must not also carry /v1.
+  # Host root, not .../v1 — clients send the full /v1/... wire path.
   upstream:
     url: https://api.openai.com
     auth:
