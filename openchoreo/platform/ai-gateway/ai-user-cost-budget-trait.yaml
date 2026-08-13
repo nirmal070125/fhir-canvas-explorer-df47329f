@@ -5,7 +5,7 @@
 # (charges x-llm-cost per fingerprint, 429 over budget), and two regex-guardrails
 # (block jailbreak/write-intent prompts on request; block URLs in the answer).
 # Costs run in nano-dollars (limit = budgetUsd * 1e9); memory backend resets on
-# gateway restart. Guardrail blocks return HTTP 446.
+# gateway restart. Guardrail blocks return HTTP 422.
 apiVersion: openchoreo.dev/v1alpha1
 kind: ClusterTrait
 metadata:
