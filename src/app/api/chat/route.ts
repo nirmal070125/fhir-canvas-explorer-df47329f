@@ -2,6 +2,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import {
   APICallError,
   createAgentUIStreamResponse,
+  RetryError,
   stepCountIs,
   ToolLoopAgent,
   type UIMessage,
@@ -135,9 +136,11 @@ export async function POST(request: Request) {
       onFinish: release,
       onError: (error) => {
         // The gateway rejects with 429 once the user's weekly LLM budget is
-        // spent; encode its reset so the UI can show a persistent notice.
-        if (APICallError.isInstance(error) && error.statusCode === 429) {
-          return encodeBudgetError(resetAtFromHeader(error.responseHeaders?.["x-ratelimit-reset"]));
+        // spent. It can hit mid tool-loop, where the SDK retries and rethrows a
+        // RetryError, so unwrap to the underlying APICallError before matching.
+        const cause = RetryError.isInstance(error) ? error.lastError : error;
+        if (APICallError.isInstance(cause) && cause.statusCode === 429) {
+          return encodeBudgetError(resetAtFromHeader(cause.responseHeaders?.["x-ratelimit-reset"]));
         }
         console.error("FHIR chat stream failed:", error instanceof Error ? error.message : error);
         return "The FHIR assistant could not complete this request.";
