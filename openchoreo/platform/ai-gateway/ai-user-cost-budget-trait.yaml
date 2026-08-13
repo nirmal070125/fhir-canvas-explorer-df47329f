@@ -1,7 +1,7 @@
 # ClusterTrait: ai-user-cost-budget — routes a component's LLM traffic through the
 # WSO2 AI gateway. Creates an LlmProxy with llm-cost (prices each request into
 # x-llm-cost), advanced-ratelimit (charges it per X-Client-Fingerprint, 429 over
-# budget), and a request regex-guardrail (blocks jailbreak/write-intent prompts, 422).
+# budget), and a request regex-guardrail (blocks prompt-injection/jailbreak prompts, 422).
 # No response guardrail: regex-guardrail fail-closes on absent JSONPath, and tool-call
 # responses carry null content, so it would break the tool loop.
 # Costs are nano-dollars (limit = budgetUsd * 1e9); memory backend resets on restart.
@@ -64,11 +64,10 @@ spec:
           # guardrail is first so it gates before any spend; llm-cost is last so it runs
           # first on the response and writes x-llm-cost before advanced-ratelimit charges it.
           policies:
-            # Block jailbreak/write-intent phrasing in the user's question (HTTP 422)
+            # Block prompt-injection/jailbreak phrasing in the user's question (HTTP 422)
             # before any spend. jsonPath targets messages[1] (the opening user turn;
             # [0] is the system prompt), not the last message — on tool-loop steps that
-            # is the tool result, whose CapabilityStatement would false-positive.
-            # No backslashes: the gateway JSON-unescapes \b, so use [^a-z] for boundaries.
+            # is the tool result, which should not be scanned as if it were a prompt.
             - name: regex-guardrail
               version: v1
               paths:
@@ -81,7 +80,7 @@ spec:
                       # guardrail's default is allowlist (block when it does not).
                       invert: true
                       jsonPath: "$.messages[1].content"
-                      regex: "(?i)((ignore|disregard|forget).*(previous|prior|above).*(instruction|prompt|rule)|(^|[^a-z])(create|update|delete|patch|post|put|remove|drop)([^a-z]).*(patient|resource|record|observation|encounter))"
+                      regex: "(?i)(ignore|disregard|forget).*(previous|prior|above).*(instruction|prompt|rule)"
                       showAssessment: true
             - name: advanced-ratelimit
               version: v1
