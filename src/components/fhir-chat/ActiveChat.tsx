@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock, ShieldAlert, Wallet } from "lucide-react";
+import { Check, Clock, Wallet } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatComposer, PoweredBy, SuggestionButtons } from "./ChatComposer";
 import { describeTool, isToolPart } from "./chat-state";
@@ -197,9 +197,8 @@ function ChatNotice({
     return (
       <div
         role="alert"
-        className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400"
+        className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400"
       >
-        <ShieldAlert className="mt-0.5 size-4 shrink-0" />
         <p>
           That request was blocked as out of scope. This assistant only answers read-only
           questions about the selected FHIR server — try rephrasing.
