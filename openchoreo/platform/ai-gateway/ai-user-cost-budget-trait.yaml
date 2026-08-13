@@ -1,11 +1,10 @@
-# ClusterTrait: ai-user-cost-budget — routes a component's LLM traffic through
-# the WSO2 AI gateway, enforces a per-user spend budget keyed on the forwarded
-# X-Client-Fingerprint, and applies two in-gateway content guardrails. Creates an
-# LlmProxy with: llm-cost (prices each request into x-llm-cost), advanced-ratelimit
-# (charges x-llm-cost per fingerprint, 429 over budget), and two regex-guardrails
-# (block jailbreak/write-intent prompts on request; block URLs in the answer).
-# Costs run in nano-dollars (limit = budgetUsd * 1e9); memory backend resets on
-# gateway restart. Guardrail blocks return HTTP 422.
+# ClusterTrait: ai-user-cost-budget — routes a component's LLM traffic through the
+# WSO2 AI gateway. Creates an LlmProxy with llm-cost (prices each request into
+# x-llm-cost), advanced-ratelimit (charges it per X-Client-Fingerprint, 429 over
+# budget), and a request regex-guardrail (blocks jailbreak/write-intent prompts, 422).
+# No response guardrail: regex-guardrail fail-closes on absent JSONPath, and tool-call
+# responses carry null content, so it would break the tool loop.
+# Costs are nano-dollars (limit = budgetUsd * 1e9); memory backend resets on restart.
 apiVersion: openchoreo.dev/v1alpha1
 kind: ClusterTrait
 metadata:
@@ -62,14 +61,14 @@ spec:
           provider:
             id: ${parameters.providerRef}
           # Request policies run top-down, response policies bottom-up. The prompt
-          # guardrail is first so it gates before any spend; llm-cost is last so it
-          # runs first on the response and writes x-llm-cost before advanced-ratelimit
-          # charges it; the URL guardrail sits above them so a blocked reply is still billed.
+          # guardrail is first so it gates before any spend; llm-cost is last so it runs
+          # first on the response and writes x-llm-cost before advanced-ratelimit charges it.
           policies:
-            # Read-only bot: block jailbreak phrasing and create/update/delete intent
-            # on the latest user message (HTTP 422) before any tokens are spent.
-            # No backslashes: the gateway JSON-unescapes \b to a backspace, so word
-            # boundaries use [^a-z] classes (case-insensitive also excludes A-Z).
+            # Block jailbreak/write-intent phrasing in the user's question (HTTP 422)
+            # before any spend. jsonPath targets messages[1] (the opening user turn;
+            # [0] is the system prompt), not the last message — on tool-loop steps that
+            # is the tool result, whose CapabilityStatement would false-positive.
+            # No backslashes: the gateway JSON-unescapes \b, so use [^a-z] for boundaries.
             - name: regex-guardrail
               version: v1
               paths:
@@ -81,22 +80,8 @@ spec:
                       # invert: block when the pattern MATCHES (denylist); the
                       # guardrail's default is allowlist (block when it does not).
                       invert: true
-                      jsonPath: "$.messages[-1].content"
+                      jsonPath: "$.messages[1].content"
                       regex: "(?i)((ignore|disregard|forget).*(previous|prior|above).*(instruction|prompt|rule)|(^|[^a-z])(create|update|delete|patch|post|put|remove|drop)([^a-z]).*(patient|resource|record|observation|encounter))"
-                      showAssessment: true
-            # A clinical assistant should never emit links: block any URL in the answer.
-            - name: regex-guardrail
-              version: v1
-              paths:
-                - path: ${parameters.apiPath}
-                  methods: [POST]
-                  params:
-                    response:
-                      enabled: true
-                      invert: true
-                      jsonPath: "$.choices[0].message.content"
-                      streamingJsonPath: "$.choices[0].delta.content"
-                      regex: "https?://"
                       showAssessment: true
             - name: advanced-ratelimit
               version: v1
