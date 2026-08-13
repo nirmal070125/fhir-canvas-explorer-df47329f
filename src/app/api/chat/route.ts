@@ -7,7 +7,7 @@ import {
   ToolLoopAgent,
   type UIMessage,
 } from "ai";
-import { encodeBudgetError, resetAtFromHeader } from "@/lib/chat-rate-limit";
+import { encodeBlockedError, encodeBudgetError, resetAtFromHeader } from "@/lib/chat-rate-limit";
 import type { FhirChatMessageMetadata } from "@/lib/fhir-chat-types";
 import { acquireReadOnlyFhirMcpClient } from "@/lib/server/fhir-mcp";
 import { resolveFhirTarget } from "@/lib/server/fhir-target";
@@ -141,6 +141,10 @@ export async function POST(request: Request) {
         const cause = RetryError.isInstance(error) ? error.lastError : error;
         if (APICallError.isInstance(cause) && cause.statusCode === 429) {
           return encodeBudgetError(resetAtFromHeader(cause.responseHeaders?.["x-ratelimit-reset"]));
+        }
+        // The gateway content guardrail refuses out-of-scope prompts with 422.
+        if (APICallError.isInstance(cause) && cause.statusCode === 422) {
+          return encodeBlockedError();
         }
         console.error("FHIR chat stream failed:", error instanceof Error ? error.message : error);
         return "The FHIR assistant could not complete this request.";

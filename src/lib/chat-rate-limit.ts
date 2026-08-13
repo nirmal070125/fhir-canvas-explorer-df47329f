@@ -7,7 +7,11 @@
 //     string. This module normalizes both into one ChatLimit.
 
 export type ChatLimit =
-  { kind: "per-minute"; retryAfterSec: number } | { kind: "weekly-budget"; resetAt: string | null };
+  | { kind: "per-minute"; retryAfterSec: number }
+  | { kind: "weekly-budget"; resetAt: string | null }
+  // The AI gateway's content guardrail refused the request (HTTP 422). Not a
+  // throttle and not an app failure — the query itself was out of scope.
+  | { kind: "blocked" };
 
 // Thrown by the transport fetch wrapper when the HTTP response is a 429.
 export class ChatRateLimitError extends Error {
@@ -27,6 +31,14 @@ export function encodeBudgetError(resetAt: string | null): string {
   return BUDGET_ERROR_PREFIX + JSON.stringify({ resetAt });
 }
 
+// The gateway guardrail returns 422; encode it so the UI shows an out-of-scope
+// notice rather than the generic failure message.
+const BLOCKED_ERROR_PREFIX = "chat-blocked:";
+
+export function encodeBlockedError(): string {
+  return BLOCKED_ERROR_PREFIX;
+}
+
 // Normalize the gateway's X-RateLimit-Reset header into an ISO timestamp. WSO2's
 // advanced-ratelimit emits either a Unix epoch (seconds) or a delta-in-seconds;
 // treat small values as a delta from now, large ones as an absolute epoch.
@@ -43,6 +55,9 @@ export function parseChatLimit(error: Error | undefined): ChatLimit | null {
     return { kind: "per-minute", retryAfterSec: error.retryAfterSec };
   }
   const message = error.message ?? "";
+  if (message.startsWith(BLOCKED_ERROR_PREFIX)) {
+    return { kind: "blocked" };
+  }
   if (message.startsWith(BUDGET_ERROR_PREFIX)) {
     try {
       const data = JSON.parse(message.slice(BUDGET_ERROR_PREFIX.length)) as { resetAt?: string };
