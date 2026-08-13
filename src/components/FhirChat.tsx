@@ -3,13 +3,13 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { MessageCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActiveChat } from "@/components/fhir-chat/ActiveChat";
 import { currentActivity, followUpSuggestions } from "@/components/fhir-chat/chat-state";
 import { ChatHeader } from "@/components/fhir-chat/ChatHeader";
 import { EmptyChat } from "@/components/fhir-chat/EmptyChat";
 import { Button } from "@/components/ui/button";
-import { ChatRateLimitError } from "@/lib/chat-rate-limit";
+import { ChatRateLimitError, parseChatLimit } from "@/lib/chat-rate-limit";
 import type { FhirChatMessage } from "@/lib/fhir-chat-types";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +46,20 @@ export function FhirChat({ baseUrl }: FhirChatProps) {
   );
   const { messages, sendMessage, setMessages, status, stop, error, clearError } =
     useChat<FhirChatMessage>({ transport });
+
+  // A gateway guardrail block (out of scope) is keyed on the first user message,
+  // so leaving it in history would re-block every later turn. Drop the blocked
+  // user turn so the conversation can continue.
+  useEffect(() => {
+    if (error && parseChatLimit(error)?.kind === "blocked") {
+      setMessages((prev) => {
+        const next = [...prev];
+        while (next.length && next[next.length - 1].role === "user") next.pop();
+        return next;
+      });
+    }
+  }, [error, setMessages]);
+
   const busy = status === "submitted" || status === "streaming";
   const hasConversation = messages.length > 0;
   const suggestions = hasConversation ? followUpSuggestions(messages) : STARTER_QUESTIONS;
