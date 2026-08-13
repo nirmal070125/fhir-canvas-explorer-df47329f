@@ -82,7 +82,9 @@ export function ChatComposer({
   onSubmit,
   onStop,
   sendDisabled = false,
+  blockedLabel,
 }: ChatComposerProps) {
+  const typingDisabled = busy || sendDisabled;
   const submit = (
     <PromptInputSubmit
       status={status}
@@ -99,6 +101,7 @@ export function ChatComposer({
       className={cn(
         "rounded-xl bg-background shadow-sm transition-[box-shadow,transform] duration-300 focus-within:shadow-md",
         !compact && "border-primary/30 shadow-md",
+        sendDisabled && "opacity-60",
       )}
     >
       <PromptInputBody>
@@ -106,11 +109,15 @@ export function ChatComposer({
           rows={compact ? 1 : 3}
           value={input}
           onChange={(event) => onInputChange(event.currentTarget.value)}
-          placeholder="Ask about the selected FHIR server…"
-          disabled={busy}
+          placeholder={
+            sendDisabled && blockedLabel ? blockedLabel : "Ask about the selected FHIR server…"
+          }
+          disabled={typingDisabled}
+          aria-disabled={typingDisabled}
           className={cn(
             "transition-[min-height] duration-300 motion-reduce:transition-none",
             compact ? "!min-h-9 max-h-24 py-2 pl-3" : "min-h-16",
+            sendDisabled && "cursor-not-allowed",
           )}
         />
       </PromptInputBody>

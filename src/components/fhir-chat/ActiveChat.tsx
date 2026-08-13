@@ -237,6 +237,12 @@ export function ActiveChat({
   const cooldownRemaining = useCountdown(cooldownUntil, onClearError);
   const blocked =
     limit?.kind === "weekly-budget" || (limit?.kind === "per-minute" && cooldownRemaining > 0);
+  const blockedLabel =
+    limit?.kind === "weekly-budget"
+      ? "AI usage limit reached"
+      : limit?.kind === "per-minute" && cooldownRemaining > 0
+        ? `Rate limited — retry in ${formatCountdown(cooldownRemaining)}`
+        : undefined;
 
   return (
     <>
@@ -271,6 +277,7 @@ export function ActiveChat({
           onSubmit={onSubmit}
           onStop={onStop}
           sendDisabled={blocked}
+          blockedLabel={blockedLabel}
         />
         <PoweredBy compact />
       </div>
