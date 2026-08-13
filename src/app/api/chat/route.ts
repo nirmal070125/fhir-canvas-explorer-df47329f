@@ -88,9 +88,7 @@ export async function POST(request: Request) {
       model: openAiFor(tenantId).chat(process.env.OPENAI_MODEL?.trim() || "gpt-5-nano"),
       tools: mcp.tools,
       stopWhen: stepCountIs(6),
-      // Hardened per OWASP LLM01:2025 (constrain behavior, define output, least
-      // privilege) and the instruction hierarchy (arXiv:2404.13208): a prompt is
-      // one layer behind the gateway guardrails and the read-only MCP client.
+      // Hardened, read-only scope: one layer behind the gateway guardrails and MCP.
       instructions: [
         "You are the read-only assistant embedded in a FHIR R4 Explorer.",
         `The selected FHIR server is ${fhirBaseUrl}.`,
