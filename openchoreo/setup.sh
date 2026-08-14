@@ -45,8 +45,10 @@ allow_trait() {
 
 # Block until at least one gateway-runtime pod exists, then until it is ready.
 wait_for_gateway() {
-  until kubectl get pods -n "$data_plane" \
-    -l app.kubernetes.io/instance=api-platform-default-gateway -o name 2>/dev/null | grep -q .; do
+  for i in $(seq 60); do
+    kubectl get pods -n "$data_plane" \
+      -l app.kubernetes.io/instance=api-platform-default-gateway -o name 2>/dev/null | grep -q . && break
+    [ "$i" -eq 60 ] && { log "gateway-runtime pod did not appear after 5m"; exit 1; }
     sleep 5
   done
   kubectl wait --for=condition=ready pod \
