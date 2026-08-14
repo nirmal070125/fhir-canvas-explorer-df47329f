@@ -15,6 +15,15 @@ data_plane="openchoreo-data-plane"
 
 log() { printf '\n%s\n' "$*"; }
 
+# Read a variable from the environment, falling back to the repo-root .env.
+dotenv() {
+  local name="$1" val="${!1:-}"
+  if [ -z "$val" ] && [ -f "$repo_root/.env" ]; then
+    val="$(sed -n "s/^$name=//p" "$repo_root/.env" | tail -1 | tr -d '"')"
+  fi
+  printf '%s' "$val"
+}
+
 # Resolve the OpenAI key and write it to OpenBao, where the AI gateway's
 # LlmProvider reads it via External Secrets.
 seed_openai_key() {
@@ -65,7 +74,20 @@ log "Platform: WSO2 API Platform AI gateway"
 helm upgrade --install api-platform-operator \
   oci://ghcr.io/wso2/api-platform/helm-charts/gateway-operator \
   --version 0.8.0 -n "$data_plane" --set gatewayApi.installStandardCRDs=false --wait --timeout 10m
-kubectl apply -f "$aigw/gateway-configuration.yaml" -f "$aigw/apigateway.yaml" -f "$aigw/rbac.yaml"
+# Seed the control-plane token into the Secret the gateway config references.
+controlplane_token="$(dotenv CONTROLPLANE_TOKEN)"
+[ -n "$controlplane_token" ] || { echo "Set CONTROLPLANE_TOKEN, or add it to .env" >&2; exit 1; }
+kubectl create secret generic gateway-controlplane-token -n "$data_plane" \
+  --from-literal=token="$controlplane_token" --dry-run=client -o yaml | kubectl apply -f -
+
+# Render the config, injecting admin/OAuth2 creds from .env (dev defaults otherwise).
+export GATEWAY_ADMIN_PASSWORD="$(dotenv GATEWAY_ADMIN_PASSWORD)"; : "${GATEWAY_ADMIN_PASSWORD:=admin}"
+export APIM_OAUTH2_CLIENT_ID="$(dotenv APIM_OAUTH2_CLIENT_ID)"; : "${APIM_OAUTH2_CLIENT_ID:=l2kngtY9ddhP840SwfPw2SP3KUYa}"
+export APIM_OAUTH2_CLIENT_SECRET="$(dotenv APIM_OAUTH2_CLIENT_SECRET)"; : "${APIM_OAUTH2_CLIENT_SECRET:=y4onq2NR7Uli1sydgMePcIbQ4Ywa}"
+export APIM_OAUTH2_PASSWORD="$(dotenv APIM_OAUTH2_PASSWORD)"; : "${APIM_OAUTH2_PASSWORD:=admin}"
+envsubst '$GATEWAY_ADMIN_PASSWORD $APIM_OAUTH2_CLIENT_ID $APIM_OAUTH2_CLIENT_SECRET $APIM_OAUTH2_PASSWORD' \
+  < "$aigw/gateway-configuration.yaml" | kubectl apply -f -
+kubectl apply -f "$aigw/apigateway.yaml" -f "$aigw/rbac.yaml"
 kubectl apply -f "$aigw/provider-auth-external-secret.yaml"
 kubectl wait externalsecret/openai-provider-auth -n "$data_plane" --for=condition=Ready --timeout=120s
 wait_for_gateway

@@ -36,7 +36,7 @@ data:
               enabled: true
               users:
                 - username: "admin"
-                  password: "admin"
+                  password: "${GATEWAY_ADMIN_PASSWORD}"
                   password_hashed: false
                   roles: ["admin"]
             idp:
@@ -114,10 +114,10 @@ data:
             sync_batch_size: 50
     
             # OAuth2 client credentials for APIM publisher API (from DCR endpoint)
-            apim_oauth2_client_id: "l2kngtY9ddhP840SwfPw2SP3KUYa"
-            apim_oauth2_client_secret: "y4onq2NR7Uli1sydgMePcIbQ4Ywa"
+            apim_oauth2_client_id: "${APIM_OAUTH2_CLIENT_ID}"
+            apim_oauth2_client_secret: "${APIM_OAUTH2_CLIENT_SECRET}"
             apim_oauth2_username: "admin"
-            apim_oauth2_password: "admin"
+            apim_oauth2_password: "${APIM_OAUTH2_PASSWORD}"
             # Gateway environment label registered in APIM
             gateway_name: "oc-platform-gateway"
     
@@ -389,8 +389,8 @@ data:
           host: wso2am-acp-service.openchoreo-control-plane:9443
           port: 9443
           token:
-            value: "019e5e87-9cba-730a-af90-99b5bdb88eb8.G9wPihxNkvpK1Vl3cH4YoOlrytlo9jkRV17RSAjM4eI"
-            # secretName: ""
+            # Value is seeded into this Secret by setup.sh (from CONTROLPLANE_TOKEN).
+            secretName: "gateway-controlplane-token"
             key: token
         # TLS certificate configuration for downstream (listener) HTTPS
         tls:
