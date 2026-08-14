@@ -45,10 +45,16 @@ describe("applyTenantToFhirUrl", () => {
     );
   });
 
-  it("does not double-prefix an already tenant-scoped path", () => {
+  it("passes through the caller's own tenant-scoped path without double-prefixing", () => {
     expect(applyTenantToFhirUrl("http://localhost:9090/t/abc123/fhir/r4", tenant)).toBe(
       "http://localhost:9090/t/abc123/fhir/r4",
     );
+  });
+
+  it("rejects a foreign tenant path on an allowlisted origin", () => {
+    expect(() =>
+      applyTenantToFhirUrl("http://localhost:9090/t/victim999/fhir/r4/Patient", tenant),
+    ).toThrow(/cross-tenant/i);
   });
 
   it("passes the URL through when there is no tenant", () => {
