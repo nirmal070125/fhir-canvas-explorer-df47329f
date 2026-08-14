@@ -3,7 +3,13 @@ import type { CapabilityStatementLike } from "@/lib/fhir-types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_BASE_URL, getBaseUrl, setBaseUrl, fhirFetch } from "@/lib/fhir-client";
+import {
+  DEFAULT_BASE_URL,
+  getStoredBaseUrl,
+  isValidBaseUrl,
+  setBaseUrl,
+  fhirFetch,
+} from "@/lib/fhir-client";
 import { CheckCircle2, XCircle, Loader2, Server } from "lucide-react";
 import { LoadSampleDataButton } from "./LoadSampleDataButton";
 import { RequestHistoryMenu } from "./RequestHistoryMenu";
@@ -101,6 +107,25 @@ export function BaseUrlBar({ baseUrl, onChange }: Props) {
 
 export function useBaseUrl() {
   const [baseUrl, set] = useState<string>(DEFAULT_BASE_URL);
-  useEffect(() => set(getBaseUrl()), []);
+  useEffect(() => {
+    const stored = getStoredBaseUrl();
+    if (stored) {
+      set(stored);
+      return;
+    }
+    // Nothing saved yet: ask the server for the deployment's default so fresh
+    // browsers land on the deployed FHIR server, not the local-dev default.
+    let cancelled = false;
+    fetch("/api/config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg: { defaultFhirBaseUrl?: string | null } | null) => {
+        const url = cfg?.defaultFhirBaseUrl;
+        if (!cancelled && url && isValidBaseUrl(url)) set(url);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   return [baseUrl, set] as const;
 }

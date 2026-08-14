@@ -17,6 +17,10 @@ import { z } from "zod";
 
 const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:9090", "http://127.0.0.1:9090"];
 
+export function isAllowedOrigin(origin: string): boolean {
+  return allowedOrigins().includes(origin);
+}
+
 function allowedOrigins(): string[] {
   const configured = process.env.FHIR_ALLOWED_ORIGINS?.trim();
   if (!configured) return DEFAULT_ALLOWED_ORIGINS;

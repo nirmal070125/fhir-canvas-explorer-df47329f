@@ -28,9 +28,14 @@ export function isValidBaseUrl(url: string): boolean {
 }
 
 export function getBaseUrl(): string {
-  if (typeof window === "undefined") return DEFAULT_BASE_URL;
+  return getStoredBaseUrl() ?? DEFAULT_BASE_URL;
+}
+
+/** The user's persisted base URL, or null when none is stored (or invalid). */
+export function getStoredBaseUrl(): string | null {
+  if (typeof window === "undefined") return null;
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored && isValidBaseUrl(stored) ? stored : DEFAULT_BASE_URL;
+  return stored && isValidBaseUrl(stored) ? stored : null;
 }
 
 /** Persists a base URL after validating it. Returns false (and stores nothing) if invalid. */

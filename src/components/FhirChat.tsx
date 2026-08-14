@@ -3,12 +3,13 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { MessageCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActiveChat } from "@/components/fhir-chat/ActiveChat";
 import { currentActivity, followUpSuggestions } from "@/components/fhir-chat/chat-state";
 import { ChatHeader } from "@/components/fhir-chat/ChatHeader";
 import { EmptyChat } from "@/components/fhir-chat/EmptyChat";
 import { Button } from "@/components/ui/button";
+import { ChatRateLimitError, parseChatLimit } from "@/lib/chat-rate-limit";
 import type { FhirChatMessage } from "@/lib/fhir-chat-types";
 import { cn } from "@/lib/utils";
 
@@ -31,11 +32,34 @@ export function FhirChat({ baseUrl }: FhirChatProps) {
       new DefaultChatTransport({
         api: "/api/chat",
         body: () => ({ baseUrl }),
+        // The transport otherwise swallows the HTTP status; surface the
+        // per-minute 429 as a typed error carrying its Retry-After.
+        fetch: async (input, init) => {
+          const response = await fetch(input, init);
+          if (response.status === 429) {
+            throw new ChatRateLimitError(Number(response.headers.get("Retry-After")) || 60);
+          }
+          return response;
+        },
       }),
     [baseUrl],
   );
   const { messages, sendMessage, setMessages, status, stop, error, clearError } =
     useChat<FhirChatMessage>({ transport });
+
+  // A gateway guardrail block (out of scope) is keyed on the first user message,
+  // so leaving it in history would re-block every later turn. Drop the blocked
+  // user turn so the conversation can continue.
+  useEffect(() => {
+    if (error && parseChatLimit(error)?.kind === "blocked") {
+      setMessages((prev) => {
+        const next = [...prev];
+        while (next.length && next[next.length - 1].role === "user") next.pop();
+        return next;
+      });
+    }
+  }, [error, setMessages]);
+
   const busy = status === "submitted" || status === "streaming";
   const hasConversation = messages.length > 0;
   const suggestions = hasConversation ? followUpSuggestions(messages) : STARTER_QUESTIONS;
@@ -102,6 +126,7 @@ export function FhirChat({ baseUrl }: FhirChatProps) {
             showFollowUps={showFollowUps}
             activity={activity}
             error={error}
+            onClearError={clearError}
             onSelectSuggestion={ask}
           />
         )}
