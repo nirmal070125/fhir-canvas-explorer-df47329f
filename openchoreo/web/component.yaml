@@ -29,9 +29,12 @@ spec:
     name: dockerfile-builder
     parameters:
       repository:
+        # Dev fork/branch. At merge, flip both to this repo's main:
+        #   url -> https://github.com/nirmal070125/fhir-canvas-explorer-df47329f
+        #   branch -> main
         url: "https://github.com/prdai-archive/wso2-fhir-canvas-explorer-df47329f"
         revision:
-          branch: "feat/openchoreo-deployment" # until this PR merges to main
+          branch: "feat/openchoreo-deployment"
         appPath: "/"
       docker:
         context: "/"
