@@ -77,7 +77,6 @@ login fails); the LB needs host port 8080 free.
 
 ## Remaining work
 
-- [ ] Production DB: managed postgres, drop `FHIR_CREATE_TABLES`
 - [ ] Cost counter on `redis` (memory resets on gateway restart)
 - [ ] CSP nonce follow-up from PR #22
 - [ ] ML-based PII masking via the custom `pii-masking-openmed` policy (currently
