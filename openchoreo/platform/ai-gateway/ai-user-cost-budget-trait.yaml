@@ -65,10 +65,9 @@ spec:
           # guardrail is first so it gates before any spend; llm-cost is last so it runs
           # first on the response and writes x-llm-cost before advanced-ratelimit charges it.
           policies:
-            # Block prompt-injection/jailbreak phrasing in the user's question (HTTP 422)
-            # before any spend. jsonPath targets messages[1] (the opening user turn;
-            # [0] is the system prompt), not the last message — on tool-loop steps that
-            # is the tool result, which should not be scanned as if it were a prompt.
+            # Block prompt-injection/jailbreak phrasing (HTTP 422) before any spend.
+            # messages[-1] scans the latest turn, so every user message is checked as it
+            # arrives; the jailbreak-only regex won't false-positive on tool results.
             - name: regex-guardrail
               version: v1
               paths:
@@ -80,7 +79,7 @@ spec:
                       # invert: block when the pattern MATCHES (denylist); the
                       # guardrail's default is allowlist (block when it does not).
                       invert: true
-                      jsonPath: "$.messages[1].content"
+                      jsonPath: "$.messages[-1].content"
                       regex: "(?i)(ignore|disregard|forget).*(previous|prior|above).*(instruction|prompt|rule)"
                       showAssessment: true
             # Mask PII in the latest message before it leaves for OpenAI, then restore
