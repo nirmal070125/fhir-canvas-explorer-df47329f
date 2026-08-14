@@ -80,3 +80,12 @@ login fails); the LB needs host port 8080 free.
 - [ ] Production DB: managed postgres, drop `FHIR_CREATE_TABLES`
 - [ ] Cost counter on `redis` (memory resets on gateway restart)
 - [ ] CSP nonce follow-up from PR #22
+- [ ] ML-based PII masking via the custom `pii-masking-openmed` policy
+  (OpenMed deidentification model, from `apim-ai-gateway-openmed-policy-use-cases`).
+  Verified working in-cluster (redacts email/phone before OpenAI, restores on
+  response) by dropping the policy definition into the controller's
+  `default-policies` and running the custom `pii-gateway` runtime image — but it
+  needs the custom runtime image (torch + model) and, in this runtime version, is
+  incompatible with `advanced-ratelimit` in the same chain (the Go->Python bridge
+  can't serialize the budget policy's `quotaResult` metadata). Ships the built-in
+  regex `pii-masking-regex` for now; revisit once both can coexist.
