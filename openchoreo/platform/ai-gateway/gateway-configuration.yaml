@@ -107,8 +107,9 @@ data:
             # How often to reconcile state with the control plane
             polling_interval: 15m
     
-            # Push API deployment events to the control plane
-            deployment_push_enabled: true
+            # Push API deployment events to the control plane.
+            # Standalone mode: disabled — there is no control plane to push to.
+            deployment_push_enabled: false
     
             # Number of deployments to fetch per batch during startup sync
             sync_batch_size: 50
@@ -386,12 +387,11 @@ data:
             admin: 9092
             metrics: 9091
         controlPlane:
-          host: wso2am-acp-service.openchoreo-control-plane:9443
-          port: 9443
-          token:
-            # Value is seeded into this Secret by setup.sh (from CONTROLPLANE_TOKEN).
-            secretName: "gateway-controlplane-token"
-            key: token
+          # Standalone mode: no WSO2 APIM (ACP) control plane. The gateway validates
+          # that a token requires a host, so both are omitted — it then runs on local
+          # RestApi/trait config only (operator default). To connect a real APIM control
+          # plane, set host and add a token secretRef here (and seed CONTROLPLANE_TOKEN).
+          host: ""
         # TLS certificate configuration for downstream (listener) HTTPS
         tls:
           # Enable TLS certificate management

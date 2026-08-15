@@ -74,12 +74,15 @@ log "Platform: WSO2 API Platform AI gateway"
 helm upgrade --install api-platform-operator \
   oci://ghcr.io/wso2/api-platform/helm-charts/gateway-operator \
   --version 0.8.0 -n "$data_plane" --set gatewayApi.installStandardCRDs=false --wait --timeout 10m
-# Seed the control-plane token into the Secret the gateway config references.
+# Standalone mode: the gateway runs on local RestApi/trait config with no WSO2 APIM
+# (ACP) control plane. The operator always wires this Secret into the gateway as the
+# registration-token env, so it must exist — but an EMPTY token means "no control
+# plane": the controller treats an empty token as unset and skips the host requirement
+# (a non-empty token would demand a control-plane host). Override CONTROLPLANE_TOKEN to
+# connect a real APIM control plane (and set its host in gateway-configuration.yaml).
 controlplane_token="$(dotenv CONTROLPLANE_TOKEN)"
-[ -n "$controlplane_token" ] || { echo "Set CONTROLPLANE_TOKEN, or add it to .env" >&2; exit 1; }
 kubectl create secret generic gateway-controlplane-token -n "$data_plane" \
   --from-literal=token="$controlplane_token" --dry-run=client -o yaml | kubectl apply -f -
-
 # Render the config, injecting admin/OAuth2 creds from .env (dev defaults otherwise).
 export GATEWAY_ADMIN_PASSWORD="$(dotenv GATEWAY_ADMIN_PASSWORD)"; : "${GATEWAY_ADMIN_PASSWORD:=admin}"
 export APIM_OAUTH2_CLIENT_ID="$(dotenv APIM_OAUTH2_CLIENT_ID)"; : "${APIM_OAUTH2_CLIENT_ID:=l2kngtY9ddhP840SwfPw2SP3KUYa}"
