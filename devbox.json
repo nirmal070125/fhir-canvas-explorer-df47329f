@@ -12,13 +12,37 @@
   "shell": {
     "init_hook": [
       "export PATH=\"$PATH:$PWD/.devbox/bin\"",
-      "command -v occ >/dev/null || echo 'occ not found \u2014 run: devbox run install-occ'"
+      "command -v occ >/dev/null || echo 'occ not found — run: devbox run install-occ'"
     ],
     "scripts": {
       "install-occ": [
         "mkdir -p .devbox/bin",
         "OCC_VERSION=v1.2.2; ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/'); OS=$(uname -s | tr '[:upper:]' '[:lower:]')",
         "curl -fsSL \"https://github.com/openchoreo/openchoreo/releases/download/${OCC_VERSION}/occ_${OCC_VERSION}_${OS}_${ARCH}.tar.gz\" | tar -xz -C .devbox/bin occ"
+      ],
+      "bootstrap-platform": [
+        "# Stand up a local OpenChoreo control plane on k3d (control + data + build planes).",
+        "# Idempotent: skips the install if the k3d cluster already exists.",
+        "# Pinned to the release-v1.2 line / charts v1.2.2 (validated by openchoreo/README.md).",
+        "export PATH=\"$PATH:$PWD/.devbox/bin\"",
+        "command -v occ >/dev/null || devbox run install-occ",
+        "if k3d cluster list openchoreo >/dev/null 2>&1; then",
+        "  echo 'k3d cluster \"openchoreo\" already exists — skipping platform install.'",
+        "else",
+        "  echo 'Installing OpenChoreo (control + data + build planes) on k3d…'",
+        "  curl -fsSL https://raw.githubusercontent.com/openchoreo/openchoreo/release-v1.2/install/k3d/k3d-install.sh | bash -s -- --version v1.2.2 --with-build",
+        "fi",
+        "kubectl wait -n openchoreo-control-plane --for=condition=available --timeout=600s deployment --all",
+        "echo 'Control plane ready.'"
+      ],
+      "up": [
+        "# Full local bring-up: platform bootstrap, then deploy the app onto it.",
+        "export PATH=\"$PATH:$PWD/.devbox/bin\"",
+        "devbox run bootstrap-platform",
+        "./openchoreo/setup.sh"
+      ],
+      "down": [
+        "k3d cluster delete openchoreo"
       ],
       "dev": [
         "bun install",

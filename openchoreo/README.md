@@ -32,17 +32,33 @@ visibility, so only `explorer-nginx` is external. Everything else is
 
 ## Prerequisites
 
-- Tooling via [devbox](https://www.jetify.com/devbox): `devbox shell`, then `devbox run install-occ`.
-- An OpenChoreo control plane (getting-started bundle, External Secrets Operator).
-- Install with `backstage.auth.oidcScope="openid profile email groups"` — the
-  default scope omits `groups`, leaving the portal empty.
+- Docker running locally (k3d provisions the cluster inside it).
+- Tooling via [devbox](https://www.jetify.com/devbox): `devbox shell` brings in
+  kubectl, helm, k3d, and `occ`.
+- An OpenChoreo control plane. `devbox run bootstrap-platform` stands one up on
+  k3d (control + data + build planes, charts `v1.2.2`, incl. External Secrets
+  Operator + OpenBao); or bring your own and skip straight to `setup.sh`.
+- If you self-host the portal, install with
+  `backstage.auth.oidcScope="openid profile email groups"` — the default scope
+  omits `groups`, leaving the portal empty.
 
 ## Deploy (development)
 
+One command — provisions the platform, then deploys the app onto it:
+
 ```sh
 export OPENAI_API_KEY=sk-...   # or put it in the repo-root .env.local
-./openchoreo/setup.sh          # seed key + platform + all app components
+devbox run up                  # bootstrap-platform + ./openchoreo/setup.sh
 ```
+
+Or run the phases separately (e.g. against a control plane you already have):
+
+```sh
+devbox run bootstrap-platform  # k3d cluster + OpenChoreo control/data/build planes (idempotent)
+./openchoreo/setup.sh          # seed key + AI gateway + all app components
+```
+
+Tear the local cluster down with `devbox run down`.
 
 Builds: each source-built component ships a `WorkflowRun` (applied by
 `setup.sh`) that builds the image; the pipeline wires it into the Workload and
