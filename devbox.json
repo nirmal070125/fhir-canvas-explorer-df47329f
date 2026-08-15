@@ -23,11 +23,16 @@
       "bootstrap-platform": [
         "export PATH=\"$PATH:$PWD/.devbox/bin\"",
         "command -v occ >/dev/null || devbox run install-occ",
+        "BACKSTAGE_PROBE_PATCH='[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/livenessProbe/initialDelaySeconds\",\"value\":180},{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/livenessProbe/failureThreshold\",\"value\":30},{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/livenessProbe/timeoutSeconds\",\"value\":5}]'",
+        "echo 'Watching to relax Backstage liveness probe (its init outruns the chart default and would time out the installer)…'",
+        "( for i in $(seq 1 180); do kubectl -n openchoreo-control-plane patch deploy backstage --type=json -p \"$BACKSTAGE_PROBE_PATCH\" >/dev/null 2>&1 && { echo 'Backstage probe relaxed.'; break; }; sleep 5; done ) &",
         "echo 'Installing OpenChoreo (control + data + build planes) on k3d…'",
         "curl -fsSL https://raw.githubusercontent.com/openchoreo/openchoreo/release-v1.2/install/k3d/k3d-install.sh | bash -s -- --version v1.2.2 --with-build",
         "kubectl wait -n openchoreo-control-plane --for=condition=available --timeout=600s deployment --all",
         "echo 'Setting Backstage OIDC scope (openid profile email groups)…'",
-        "helm upgrade openchoreo-control-plane oci://ghcr.io/openchoreo/helm-charts/openchoreo-control-plane --version 1.2.2 --namespace openchoreo-control-plane --reuse-values --set backstage.auth.oidcScope='openid profile email groups' --wait --timeout 300s",
+        "helm upgrade openchoreo-control-plane oci://ghcr.io/openchoreo/helm-charts/openchoreo-control-plane --version 1.2.2 --namespace openchoreo-control-plane --reuse-values --set backstage.auth.oidcScope='openid profile email groups' >/dev/null",
+        "kubectl -n openchoreo-control-plane patch deploy backstage --type=json -p \"$BACKSTAGE_PROBE_PATCH\" >/dev/null 2>&1 || true",
+        "kubectl -n openchoreo-control-plane rollout status deploy/backstage --timeout=300s || echo 'Backstage still settling (portal only — does not block deploys).'",
         "echo 'Control plane ready.'"
       ],
       "up": [
