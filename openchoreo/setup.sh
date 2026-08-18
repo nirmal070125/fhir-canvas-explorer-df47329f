@@ -128,7 +128,10 @@ fi
 if ! kubectl get clusterworkflowtemplate containerfile-build \
     -o jsonpath='{.spec.templates[0].container.args[0]}' | grep -q -- '--network=host'; then
   kubectl get clusterworkflowtemplate containerfile-build -o json \
-    | jq '.spec.templates[0].container.args[0] |= sub("podman build -t"; "podman build --network=host -t")' \
+    | jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.generation,
+              .metadata.creationTimestamp, .metadata.managedFields)
+          | .spec.templates[0].container.args[0]
+            |= sub("podman build -t"; "podman build --network=host -t")' \
     | kubectl apply -f -
 fi
 
