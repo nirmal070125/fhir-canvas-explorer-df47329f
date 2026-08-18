@@ -4,7 +4,7 @@
     "nodejs@22",
     "bun@latest",
     "kubectl@latest",
-    "kubernetes-helm@latest",
+    "kubernetes-helm@3.20.2",
     "k3d@latest",
     "jq@latest",
     "gettext@latest"
