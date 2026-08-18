@@ -105,4 +105,16 @@ log "App: components"
 kubectl apply -f "$here/project" -f "$here/postgres" \
   -f "$here/wso2-fhir-server" -f "$here/web" -f "$here/nginx"
 
+# The binding ships with resourceRelease unset; pin it to the content-hashed
+# release the Resource controller mints, or postgres never deploys.
+release=""
+for _ in $(seq 1 60); do
+  release="$(kubectl get resource fhir-postgres -n default -o jsonpath='{.status.latestRelease.name}' 2>/dev/null)"
+  [ -n "$release" ] && break
+  sleep 2
+done
+[ -n "$release" ] || { echo "fhir-postgres never produced a ResourceRelease" >&2; exit 1; }
+kubectl patch resourcereleasebinding fhir-postgres-development -n default \
+  --type=merge -p "{\"spec\":{\"resourceRelease\":\"$release\"}}"
+
 log "Done. Verify: kubectl get components,workloads -n default"
