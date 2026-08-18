@@ -101,6 +101,27 @@ kubectl apply -f "$here/platform/http-route-timeout-trait.yaml" -f "$aigw/ai-use
 allow_trait service        ai-user-cost-budget
 allow_trait web-application http-route-timeout
 
+# k3d inherits the host DNS config, which breaks in-cluster builds two ways
+# (see README findings): a host search domain whose zone answers NOERROR for
+# arbitrary subdomains stops ndots:5 resolvers from ever trying the literal
+# name, and AAAA answers on a host without IPv6 connectivity refuse every
+# connection. Fix both at the cluster's CoreDNS. Probe through the k3d node
+# so the test follows the same resolver path the pods use.
+dns_patch=""
+for domain in $(sed -n 's/^search //p' /etc/resolv.conf); do
+  if docker exec k3d-openchoreo-server-0 nslookup "registry.npmjs.org.$domain" >/dev/null 2>&1; then
+    dns_patch="$dns_patch\"nosearchleak-$domain.override\":\"template IN ANY $domain {\\n  rcode NXDOMAIN\\n}\\n\","
+  fi
+done
+if ! curl -6 -fsS --max-time 5 -o /dev/null https://registry.npmjs.org/-/ping 2>/dev/null; then
+  dns_patch="$dns_patch\"noaaaa.override\":\"template IN AAAA . {\\n  rcode NOERROR\\n}\\n\","
+fi
+if [ -n "$dns_patch" ]; then
+  kubectl patch cm coredns-custom -n kube-system --type=merge -p "{\"data\":{${dns_patch%,}}}"
+  kubectl rollout restart deploy/coredns -n kube-system
+  kubectl rollout status deploy/coredns -n kube-system --timeout=120s
+fi
+
 # The stock containerfile-build template runs podman under pasta user-mode
 # networking, which drops bun install's parallel registry traffic; build on
 # the pod's own network instead (template patch belongs upstream).
