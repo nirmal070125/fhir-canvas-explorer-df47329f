@@ -101,6 +101,16 @@ kubectl apply -f "$here/platform/http-route-timeout-trait.yaml" -f "$aigw/ai-use
 allow_trait service        ai-user-cost-budget
 allow_trait web-application http-route-timeout
 
+# The stock containerfile-build template runs podman under pasta user-mode
+# networking, which drops bun install's parallel registry traffic; build on
+# the pod's own network instead (template patch belongs upstream).
+if ! kubectl get clusterworkflowtemplate containerfile-build \
+    -o jsonpath='{.spec.templates[0].container.args[0]}' | grep -q -- '--network=host'; then
+  kubectl get clusterworkflowtemplate containerfile-build -o json \
+    | jq '.spec.templates[0].container.args[0] |= sub("podman build -t"; "podman build --network=host -t")' \
+    | kubectl apply -f -
+fi
+
 log "App: components"
 kubectl apply -f "$here/project" -f "$here/postgres" \
   -f "$here/wso2-fhir-server" -f "$here/web" -f "$here/nginx"
