@@ -1,9 +1,6 @@
-# RKE2 cluster for hosting OpenChoreo, provisioned in the solutions-rnd-oh-demos
-# tenant space on the us-dc Harvester datacenter. One machine per OpenChoreo
-# plane; the RKE2 control-plane role is co-located on the OpenChoreo
-# control-plane machine to avoid a fourth VM. The machine_labels land on the
-# Kubernetes nodes and are used as nodeSelectors when the OpenChoreo Helm
-# charts are installed (see infra/rke2/README.md).
+# RKE2 cluster for OpenChoreo: one machine per plane, node-labelled for the
+# Helm installs' nodeSelectors (see README.md). RKE2 control-plane role is
+# co-located on the OpenChoreo control-plane machine to avoid a fourth VM.
 module "openchoreo_rke2" {
   source = "github.com/wso2/open-cloud-datacenter//modules/tenancy/k8s-cluster?ref=terraform/v0.1.7"
 
