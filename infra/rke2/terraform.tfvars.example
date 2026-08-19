@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is git-ignored.
+# Credentials go in secret.tfvars (also git-ignored) — see secret.tfvars.example.
+
+rancher_api_url        = "https://your-rancher-url"  # REPLACE
+harvester_cluster_name = "your-harvester-cluster"    # REPLACE
+ntp_server             = "pool.ntp.org"
+
+# ssh_authorized_keys is optional — add SSH public keys to reach the node VMs
+# ssh_authorized_keys = ["ssh-ed25519 AAAA... you@host"]

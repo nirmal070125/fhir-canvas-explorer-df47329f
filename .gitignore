@@ -41,3 +41,11 @@ tsconfig.tsbuildinfo
 
 # Local docs, not part of the deployment
 .claude/docs/
+
+# Terraform (infra/rke2)
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+secret.tfvars
+terraform.tfvars
