@@ -13,9 +13,13 @@ node label each pool sets:
 
 | Pool  | Plane            | Roles                        | CPU | RAM  | Disk  |
 |-------|------------------|------------------------------|-----|------|-------|
-| oc-cp | control          | control-plane + etcd + worker| 6   | 12Gi | 60Gi  |
-| oc-dp | data (workloads) | worker                       | 8   | 16Gi | 100Gi |
-| oc-wp | build            | worker                       | 6   | 12Gi | 80Gi  |
+| oc-cp | control          | control-plane + etcd + worker| 4   | 16Gi | 100Gi |
+| oc-dp | data (workloads) | worker                       | 6   | 24Gi | 200Gi |
+| oc-wp | build            | worker                       | 6   | 16Gi | 100Gi |
+
+Sized against the tenant quota of 16 CPU / 64Gi / 500Gi: all 16 cores
+allocated, with 8Gi RAM and 100Gi storage left as headroom for workload
+PersistentVolumes.
 
 The RKE2 control-plane role is co-located on the OpenChoreo control-plane
 machine to avoid a fourth VM. Scale a pool by editing `quantity` and

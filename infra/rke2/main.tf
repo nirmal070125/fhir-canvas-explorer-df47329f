@@ -28,9 +28,9 @@ module "openchoreo_rke2" {
       name            = "oc-cp"
       vm_namespace    = local.vm_namespace
       quantity        = 1
-      cpu_count       = "6"
-      memory_size     = "12"
-      disk_size       = 60
+      cpu_count       = "4"
+      memory_size     = "16"
+      disk_size       = 100
       image_name      = local.image_name
       vm_network      = local.vm_network
       storage_network = local.storage_network
@@ -43,9 +43,9 @@ module "openchoreo_rke2" {
       name            = "oc-dp"
       vm_namespace    = local.vm_namespace
       quantity        = 1
-      cpu_count       = "8"
-      memory_size     = "16"
-      disk_size       = 100
+      cpu_count       = "6"
+      memory_size     = "24"
+      disk_size       = 200
       image_name      = local.image_name
       vm_network      = local.vm_network
       storage_network = local.storage_network
@@ -59,8 +59,8 @@ module "openchoreo_rke2" {
       vm_namespace    = local.vm_namespace
       quantity        = 1
       cpu_count       = "6"
-      memory_size     = "12"
-      disk_size       = 80
+      memory_size     = "16"
+      disk_size       = 100
       image_name      = local.image_name
       vm_network      = local.vm_network
       storage_network = local.storage_network
